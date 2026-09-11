@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import api from '../lib/api'
+import api, { API_BASE } from '../lib/api'
 import { useAuth } from '../lib/auth'
 import StatusBadge from '../components/StatusBadge'
 
@@ -48,7 +48,7 @@ export default function CaseDetail() {
   if (!c) return <div className="text-neutral-500">Loading…</div>
 
   const actions = ROLE_ACTIONS[user.role] || []
-  const evidenceUrl = (p) => `/evidence/${p.split(/[\\/]/).pop()}`
+  const evidenceUrl = (p) => `${API_BASE}/evidence/${p.split(/[\\/]/).pop()}`
 
   return (
     <div className="max-w-4xl">

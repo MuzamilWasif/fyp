@@ -1,6 +1,8 @@
 import axios from 'axios'
 
-const api = axios.create({ baseURL: '/' })
+export const API_BASE = import.meta.env.VITE_API_URL || ''
+
+const api = axios.create({ baseURL: API_BASE || '/' })
 
 api.interceptors.request.use((cfg) => {
   const t = localStorage.getItem('token')
