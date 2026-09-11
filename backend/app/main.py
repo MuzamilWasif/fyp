@@ -30,8 +30,7 @@ app.include_router(lookup.router)
 app.mount("/evidence", StaticFiles(directory=settings.EVIDENCE_DIR), name="evidence")
 
 
-@app.on_event("startup")
-def auto_seed():
+def _auto_seed():
     try:
         from .database import SessionLocal
         from .models import User
@@ -41,10 +40,22 @@ def auto_seed():
         if empty:
             from .seed import run
             run()
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"[seed] skipped: {type(e).__name__}: {e}")
+
+
+_auto_seed()  # runs at import time so it works on serverless too
 
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "service": "vigilanteye-backend"}
+    info = {"status": "ok", "service": "vigilanteye-backend"}
+    try:
+        from .database import SessionLocal
+        from .models import User
+        db = SessionLocal()
+        info["users"] = db.query(User).count()
+        db.close()
+    except Exception as e:
+        info["db_error"] = type(e).__name__
+    return info
