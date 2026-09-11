@@ -1,5 +1,21 @@
 # Deploying VigilantEye
 
+## Recommended: everything on Vercel + Neon (no credit card anywhere)
+
+1. neon.tech → sign up free → Create project (name it vigilanteye) → copy the
+   connection string (starts with postgresql://).
+2. vercel.com → sign in with GitHub → Add New → Project → import the `fyp` repo.
+   Leave Root Directory as the repository root (do NOT set it to frontend).
+3. Environment Variables: add `DATABASE_URL` = the Neon connection string, and
+   `SECRET_KEY` = any long random string.
+4. Deploy. One URL serves the portal and the API (/api/* runs as serverless
+   functions); demo accounts are auto-seeded on first request.
+
+Serverless limitations (fine for demos): no WebSockets, so live toasts are off and
+pages update on refresh; evidence uploads don't persist between requests. For
+persistent evidence and WebSockets use the Render path below instead.
+
+
 The portal deploys as two pieces: the FastAPI backend on Render (free tier, includes
 PostgreSQL and WebSocket support) and the React frontend on Vercel. The detection engine
 is not deployed to the cloud — it runs on-premises next to the cameras, exactly as the
