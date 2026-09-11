@@ -30,6 +30,21 @@ app.include_router(lookup.router)
 app.mount("/evidence", StaticFiles(directory=settings.EVIDENCE_DIR), name="evidence")
 
 
+@app.on_event("startup")
+def auto_seed():
+    try:
+        from .database import SessionLocal
+        from .models import User
+        db = SessionLocal()
+        empty = db.query(User).first() is None
+        db.close()
+        if empty:
+            from .seed import run
+            run()
+    except Exception:
+        pass
+
+
 @app.get("/api/health")
 def health():
     return {"status": "ok", "service": "vigilanteye-backend"}
