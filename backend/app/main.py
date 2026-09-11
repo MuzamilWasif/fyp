@@ -6,8 +6,17 @@ from .database import Base, engine
 from .config import settings
 from .routers import auth, cases, alerts, dashboard, notifications, audit, admin, lookup
 
-Base.metadata.create_all(bind=engine)
-os.makedirs(settings.EVIDENCE_DIR, exist_ok=True)
+try:
+    Base.metadata.create_all(bind=engine)
+except Exception as e:
+    print(f"[db] create_all skipped: {type(e).__name__}: {e}")
+
+try:
+    os.makedirs(settings.EVIDENCE_DIR, exist_ok=True)
+except OSError:
+    # read-only filesystem (serverless) - fall back to /tmp
+    settings.EVIDENCE_DIR = "/tmp/evidence_store"
+    os.makedirs(settings.EVIDENCE_DIR, exist_ok=True)
 
 app = FastAPI(title="VigilantEye API", version="1.0.0",
               description="AI-Driven UFM Detection and Automated UFM Portal")
