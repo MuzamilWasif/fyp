@@ -1,0 +1,5 @@
+ultralytics==8.3.49
+opencv-python==4.10.0.84
+mediapipe==0.10.18
+requests==2.32.3
+numpy<2
