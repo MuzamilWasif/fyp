@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from .database import Base, engine
 from .config import settings
-from .routers import auth, cases, alerts, dashboard, notifications, audit
+from .routers import auth, cases, alerts, dashboard, notifications, audit, admin, lookup
 
 Base.metadata.create_all(bind=engine)
 os.makedirs(settings.EVIDENCE_DIR, exist_ok=True)
@@ -24,6 +24,8 @@ app.include_router(alerts.router)
 app.include_router(dashboard.router)
 app.include_router(notifications.router)
 app.include_router(audit.router)
+app.include_router(admin.router)
+app.include_router(lookup.router)
 
 app.mount("/evidence", StaticFiles(directory=settings.EVIDENCE_DIR), name="evidence")
 

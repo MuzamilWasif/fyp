@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../lib/api'
 
@@ -7,6 +7,8 @@ const VIOLATIONS = ['mobile_phone', 'smart_watch', 'electronic_device', 'notes_p
 export default function NewCase() {
   const nav = useNavigate()
   const [params] = useSearchParams()
+  const [exams, setExams] = useState([])
+  const [examId, setExamId] = useState('')
   const [form, setForm] = useState({
     student_reg_no: '', student_name: '', student_department: '',
     exam_name: '', exam_date: '', exam_time: '', room: params.get('room') || '',
@@ -18,8 +20,35 @@ export default function NewCase() {
   })
   const [file, setFile] = useState(null)
   const [error, setError] = useState('')
+  const [hint, setHint] = useState('')
+
+  useEffect(() => { api.get('/api/admin/exams').then(r => setExams(r.data)).catch(() => {}) }, [])
 
   const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }))
+
+  const pickExam = (id) => {
+    setExamId(id)
+    const e = exams.find(x => String(x.id) === String(id))
+    if (e) setForm(f => ({ ...f, exam_name: e.name, exam_date: e.date, exam_time: e.start_time, room: e.hall || f.room, student_department: e.department || f.student_department }))
+  }
+
+  const lookupSeat = async () => {
+    setHint('')
+    if (!examId || !form.seat) { setHint('Select an exam and enter a seat first'); return }
+    try {
+      const { data } = await api.get('/api/lookup/seat', { params: { exam_id: examId, seat: form.seat } })
+      setForm(f => ({ ...f, ...data, seat: f.seat }))
+      setHint(`Auto-filled from seat plan: ${data.student_name}`)
+    } catch { setHint('No student assigned to that seat') }
+  }
+
+  const lookupStudent = async () => {
+    if (!form.student_reg_no) return
+    try {
+      const { data } = await api.get('/api/lookup/student', { params: { reg_no: form.student_reg_no } })
+      setForm(f => ({ ...f, student_name: data.student_name || f.student_name, student_department: data.department || f.student_department }))
+    } catch {}
+  }
 
   const submit = async () => {
     setError('')
@@ -37,27 +66,62 @@ export default function NewCase() {
     }
   }
 
-  const Field = ({ label, k, type = 'text', placeholder }) => (
-    <div>
-      <label className="text-xs text-neutral-400">{label}</label>
-      <input className="input" type={type} value={form[k]} onChange={set(k)} placeholder={placeholder || ''} />
-    </div>
-  )
-
   return (
     <div className="max-w-2xl">
-      <h1 className="text-2xl font-bold mb-4">Report UFM Case</h1>
+      <h1 className="text-2xl font-bold mb-1">Report UFM Case</h1>
+      <p className="text-sm text-neutral-400 mb-4">Pick the exam and seat to auto-fill the student, or enter details manually.</p>
       <div className="card grid md:grid-cols-2 gap-4">
-        <Field label="Student Reg No *" k="student_reg_no" placeholder="232430" />
-        <Field label="Student Name *" k="student_name" />
-        <Field label="Department" k="student_department" placeholder="CS" />
-        <Field label="Exam Name" k="exam_name" placeholder="Data Structures Final" />
-        <Field label="Exam Date" k="exam_date" type="date" />
-        <Field label="Exam Time" k="exam_time" type="time" />
-        <Field label="Room" k="room" placeholder="A-101" />
-        <Field label="Seat" k="seat" placeholder="A12" />
-        <Field label="Camera ID" k="camera_id" />
+        <div className="md:col-span-2 grid md:grid-cols-3 gap-2 items-end">
+          <div className="md:col-span-2">
+            <label className="text-xs text-neutral-400">Exam</label>
+            <select className="input" value={examId} onChange={e => pickExam(e.target.value)}>
+              <option value="">Select exam (optional)</option>
+              {exams.map(e => <option key={e.id} value={e.id}>{e.name} · {e.date} · {e.hall}</option>)}
+            </select>
+          </div>
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <label className="text-xs text-neutral-400">Seat</label>
+              <input className="input" value={form.seat} onChange={set('seat')} placeholder="A12" />
+            </div>
+            <button className="btn-ghost self-end" onClick={lookupSeat}>Find</button>
+          </div>
+          {hint && <div className="md:col-span-3 text-xs text-brand">{hint}</div>}
+        </div>
+
         <div>
+          <label className="text-xs text-neutral-400">Student Reg No *</label>
+          <input className="input" value={form.student_reg_no} onChange={set('student_reg_no')} onBlur={lookupStudent} placeholder="232430" />
+        </div>
+        <div>
+          <label className="text-xs text-neutral-400">Student Name *</label>
+          <input className="input" value={form.student_name} onChange={set('student_name')} />
+        </div>
+        <div>
+          <label className="text-xs text-neutral-400">Department</label>
+          <input className="input" value={form.student_department} onChange={set('student_department')} placeholder="CS" />
+        </div>
+        <div>
+          <label className="text-xs text-neutral-400">Exam Name</label>
+          <input className="input" value={form.exam_name} onChange={set('exam_name')} />
+        </div>
+        <div>
+          <label className="text-xs text-neutral-400">Exam Date</label>
+          <input className="input" type="date" value={form.exam_date} onChange={set('exam_date')} />
+        </div>
+        <div>
+          <label className="text-xs text-neutral-400">Exam Time</label>
+          <input className="input" type="time" value={form.exam_time} onChange={set('exam_time')} />
+        </div>
+        <div>
+          <label className="text-xs text-neutral-400">Room</label>
+          <input className="input" value={form.room} onChange={set('room')} placeholder="A-101" />
+        </div>
+        <div>
+          <label className="text-xs text-neutral-400">Camera ID</label>
+          <input className="input" value={form.camera_id} onChange={set('camera_id')} />
+        </div>
+        <div className="md:col-span-2">
           <label className="text-xs text-neutral-400">Violation Type *</label>
           <select className="input" value={form.violation_type} onChange={set('violation_type')}>
             {VIOLATIONS.map(v => <option key={v} value={v}>{v.replaceAll('_', ' ')}</option>)}

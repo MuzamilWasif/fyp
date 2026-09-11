@@ -58,6 +58,7 @@ export default function CaseDetail() {
           <div className="text-sm text-neutral-400">{c.exam_name} · {c.room}{c.seat && ` / Seat ${c.seat}`} · {c.exam_date} {c.exam_time}</div>
         </div>
         <div className="flex items-center gap-2">
+          <button className="btn-ghost no-print" onClick={() => window.print()}>Print report</button>
           {c.result_hold && <span className="badge bg-red-500/20 text-red-400">result hold</span>}
           {c.transcript_blocked && <span className="badge bg-red-500/20 text-red-400">transcript blocked</span>}
           <StatusBadge status={c.status} />

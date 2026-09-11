@@ -22,7 +22,20 @@ def stats(db: Session = Depends(get_db), user: User = Depends(get_current_user))
     by_violation = dict(db.query(UFMCase.violation_type, func.count(UFMCase.id))
                         .group_by(UFMCase.violation_type).all())
 
+    from datetime import datetime, timedelta
+    # monthly trend, last 12 months
+    trend = {}
+    now = datetime.utcnow()
+    for i in range(11, -1, -1):
+        m = (now.replace(day=1) - timedelta(days=i * 30))
+        trend[m.strftime("%Y-%m")] = 0
+    for (created,) in db.query(UFMCase.created_at).all():
+        key = created.strftime("%Y-%m")
+        if key in trend:
+            trend[key] += 1
+
     return {
+        "monthly_trend": trend,
         "total_cases": total,
         "open_cases": open_cases,
         "decided_cases": decided,

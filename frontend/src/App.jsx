@@ -8,6 +8,9 @@ import CaseDetail from './pages/CaseDetail'
 import NewCase from './pages/NewCase'
 import Alerts from './pages/Alerts'
 import Audit from './pages/Audit'
+import LiveMonitoring from './pages/LiveMonitoring'
+import Setup from './pages/Setup'
+import Users from './pages/Users'
 
 function Protected({ children }) {
   const { user } = useAuth()
@@ -25,6 +28,9 @@ export default function App() {
       <Route path="/cases/:id" element={<Protected><CaseDetail /></Protected>} />
       <Route path="/alerts" element={<Protected><Alerts /></Protected>} />
       <Route path="/audit" element={<Protected><Audit /></Protected>} />
+      <Route path="/monitoring" element={<Protected><LiveMonitoring /></Protected>} />
+      <Route path="/setup" element={<Protected><Setup /></Protected>} />
+      <Route path="/users" element={<Protected><Users /></Protected>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

@@ -124,6 +124,7 @@ class AlertIn(BaseModel):
 
 class AlertOut(AlertIn):
     id: int
+    severity: float = 0.5
     status: str
     case_id: Optional[int] = None
     created_at: datetime

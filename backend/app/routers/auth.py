@@ -37,3 +37,23 @@ def login(request: Request, form: OAuth2PasswordRequestForm = Depends(), db: Ses
 @router.get("/me", response_model=UserOut)
 def me(user: User = Depends(get_current_user)):
     return user
+
+
+from pydantic import BaseModel
+
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str
+
+
+@router.post("/change-password")
+def change_password(payload: PasswordChange, db: Session = Depends(get_db),
+                    user: User = Depends(get_current_user)):
+    if not verify_password(payload.current_password, user.hashed_password):
+        raise HTTPException(400, "Current password is incorrect")
+    if len(payload.new_password) < 8:
+        raise HTTPException(400, "New password must be at least 8 characters")
+    user.hashed_password = hash_password(payload.new_password)
+    db.commit()
+    log(db, user=user, action="password_changed", entity="user", entity_id=user.id)
+    return {"ok": True}

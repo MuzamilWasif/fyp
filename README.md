@@ -91,6 +91,19 @@ docker compose exec backend python -m app.seed
 | UFM Committee | committee@au.edu.pk |
 | Student | student@au.edu.pk |
 
+## Feature highlights
+
+- **AI surveillance**: YOLOv8 + MediaPipe with multi-frame repeated-error validation, per-camera cooldowns, and a suspicion score matrix (label weight x confidence) on every alert.
+- **Live monitoring**: annotated MJPEG feeds from the detection engine rendered in the portal, with an unhandled-alerts panel and real-time toasts over WebSocket.
+- **One-click alert → case**: converting an AI alert pre-fills the case form and attaches the evidence clip automatically.
+- **Seat-plan auto-fill**: Exam Dept uploads a per-exam seat CSV; invigilators resolve the student from exam + seat, or from reg no.
+- **Full institutional workflow**: Invigilator → HOD (digital sign) → DEC → Examination Department (result hold / transcript block) → UFM Committee decision + penalty → release and close, with per-role permissions enforced server-side.
+- **Governance**: tamper-evident audit trail of every action, complete case history, printable case report, portal + email notifications at every stage.
+- **Administration**: halls, cameras, exams, seat plans, and user management with account activation control.
+- **Quality**: end-to-end API tests for auth, RBAC, and the whole case lifecycle; GitHub Actions CI for backend tests, frontend build, and detection syntax.
+
+See `docs/ARCHITECTURE.md` for the system diagram, alert lifecycle, and role permission matrix. A sample seat plan CSV is in `docs/seat_plan_sample.csv`.
+
 ## Tech stack
 
 React.js + Tailwind CSS · FastAPI · PostgreSQL (SQLite for dev) · SQLAlchemy · JWT · WebSocket · YOLOv8 (Ultralytics) · MediaPipe · OpenCV · RTSP · Docker

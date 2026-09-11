@@ -30,10 +30,11 @@ export default function Alerts() {
               <div className="font-semibold">{a.label.replaceAll('_', ' ')}
                 <span className="text-neutral-400 font-normal"> · {a.camera_id}{a.room && ` (${a.room})`}</span></div>
               <div className="text-xs text-neutral-500">
-                confidence {(a.confidence * 100).toFixed(0)}% · {a.frame_count} frames · {new Date(a.created_at).toLocaleString()}
+                suspicion {(a.severity * 100).toFixed(0)}% · confidence {(a.confidence * 100).toFixed(0)}% · {a.frame_count} frames · {new Date(a.created_at).toLocaleString()}
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <span className={`badge ${a.severity >= 0.7 ? 'bg-red-500/20 text-red-400' : a.severity >= 0.5 ? 'bg-amber-500/20 text-amber-400' : 'bg-neutral-700 text-neutral-300'}`}>sev {(a.severity * 100).toFixed(0)}</span>
               <span className={`badge ${a.status === 'new' ? 'bg-red-500/20 text-red-400' : 'bg-neutral-700 text-neutral-300'}`}>{a.status.replaceAll('_',' ')}</span>
               {a.status === 'new' && <>
                 <button className="btn-ghost" onClick={() => act(a.id, 'acknowledge')}>Acknowledge</button>

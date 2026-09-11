@@ -140,8 +140,59 @@ class DetectionAlert(Base):
     room = Column(String, default="")
     label = Column(String)
     confidence = Column(Float)
+    severity = Column(Float, default=0.5)   # suspicion score 0..1
     frame_count = Column(Integer, default=1)
     evidence_path = Column(String, default="")
     status = Column(String, default="new")
     case_id = Column(Integer, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class Hall(Base):
+    __tablename__ = "halls"
+    id = Column(Integer, primary_key=True)
+    name = Column(String, unique=True, nullable=False)     # e.g. A-101
+    building = Column(String, default="")
+    capacity = Column(Integer, default=0)
+
+    cameras = relationship("Camera", back_populates="hall", cascade="all, delete-orphan")
+
+
+class Camera(Base):
+    __tablename__ = "cameras"
+    id = Column(Integer, primary_key=True)
+    camera_id = Column(String, unique=True, nullable=False)  # e.g. CAM-A101-1
+    hall_id = Column(Integer, ForeignKey("halls.id"))
+    rtsp_url = Column(String, default="")
+    stream_url = Column(String, default="")                  # MJPEG url served by detection engine
+    is_active = Column(Boolean, default=True)
+
+    hall = relationship("Hall", back_populates="cameras")
+
+
+class Exam(Base):
+    __tablename__ = "exams"
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    course_code = Column(String, default="")
+    department = Column(String, default="")
+    semester = Column(String, default="")
+    date = Column(String, default="")
+    start_time = Column(String, default="")
+    end_time = Column(String, default="")
+    hall_id = Column(Integer, ForeignKey("halls.id"), nullable=True)
+
+    hall = relationship("Hall")
+    seats = relationship("SeatAssignment", back_populates="exam", cascade="all, delete-orphan")
+
+
+class SeatAssignment(Base):
+    __tablename__ = "seat_assignments"
+    id = Column(Integer, primary_key=True)
+    exam_id = Column(Integer, ForeignKey("exams.id"))
+    seat = Column(String, nullable=False)                    # e.g. A12
+    student_reg_no = Column(String, nullable=False)
+    student_name = Column(String, default="")
+    department = Column(String, default="")
+
+    exam = relationship("Exam", back_populates="seats")

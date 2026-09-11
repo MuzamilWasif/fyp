@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import NotificationBell from './NotificationBell'
+import ToastHost from './Toast'
 
 const ROLE_LABELS = {
   admin: 'Admin', invigilator: 'Invigilator', hod: 'HOD', dec: 'DEC',
@@ -16,12 +17,17 @@ export default function Layout({ children }) {
     { to: '/cases', label: 'Cases' },
   ]
   if (['invigilator', 'admin'].includes(user.role)) links.push({ to: '/cases/new', label: 'Report UFM' })
-  if (['invigilator', 'hod', 'exam_dept', 'admin'].includes(user.role)) links.push({ to: '/alerts', label: 'Live Alerts' })
+  if (['invigilator', 'hod', 'exam_dept', 'admin'].includes(user.role)) {
+    links.push({ to: '/alerts', label: 'Live Alerts' })
+    links.push({ to: '/monitoring', label: 'Live Monitoring' })
+  }
+  if (['exam_dept', 'admin'].includes(user.role)) links.push({ to: '/setup', label: 'Exams & Halls' })
   if (['exam_dept', 'ufm_committee', 'admin'].includes(user.role)) links.push({ to: '/audit', label: 'Audit Trail' })
+  if (user.role === 'admin') links.push({ to: '/users', label: 'Users' })
 
   return (
     <div className="min-h-screen flex">
-      <aside className="w-56 border-r border-neutral-800 p-4 flex flex-col gap-1">
+      <aside className="w-56 border-r border-neutral-800 p-4 flex flex-col gap-1 no-print">
         <div className="text-brand font-bold text-lg mb-4">VigilantEye</div>
         {links.map(l => (
           <Link key={l.to} to={l.to}
@@ -36,9 +42,10 @@ export default function Layout({ children }) {
         </div>
       </aside>
       <main className="flex-1 p-6 overflow-y-auto">
-        <div className="flex justify-end mb-4"><NotificationBell /></div>
+        <div className="flex justify-end mb-4 no-print"><NotificationBell /></div>
         {children}
       </main>
+      <ToastHost />
     </div>
   )
 }

@@ -11,16 +11,26 @@ from ..services.audit import log
 router = APIRouter(prefix="/api/alerts", tags=["alerts"])
 
 
+LABEL_WEIGHTS = {
+    "mobile_phone": 0.95, "smart_watch": 0.85, "electronic_device": 0.85,
+    "notes": 0.75, "notes_paper": 0.75, "paper_exchange": 0.8,
+    "talking_communication": 0.6, "looking_around": 0.5,
+}
+
+
 @router.post("", response_model=AlertOut)
 async def ingest_alert(payload: AlertIn, db: Session = Depends(get_db)):
-    """Called by the detection engine when a UFM event is confirmed across frames."""
-    alert = DetectionAlert(**payload.model_dump())
+    """Called by the detection engine when a UFM event is confirmed across frames.
+    Severity = label weight x model confidence (suspicion score matrix)."""
+    severity = round(LABEL_WEIGHTS.get(payload.label, 0.5) * payload.confidence, 3)
+    alert = DetectionAlert(**payload.model_dump(), severity=severity)
     db.add(alert); db.commit(); db.refresh(alert)
     log(db, user=None, action="ai_alert", entity="alert", entity_id=alert.id,
         detail=f"{alert.label} cam={alert.camera_id} conf={alert.confidence:.2f}")
     await manager.broadcast({
         "type": "alert", "id": alert.id, "camera_id": alert.camera_id, "room": alert.room,
-        "label": alert.label, "confidence": alert.confidence, "created_at": alert.created_at,
+        "label": alert.label, "confidence": alert.confidence, "severity": alert.severity,
+        "created_at": alert.created_at,
     })
     return alert
 

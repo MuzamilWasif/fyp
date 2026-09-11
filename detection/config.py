@@ -17,4 +17,5 @@ CONFIDENCE_THRESHOLD = 0.45
 CONFIRM_FRAMES = 8
 CONFIRM_WINDOW_SEC = 5
 ALERT_COOLDOWN_SEC = 60          # per camera+label
+STREAM_PORT = int(os.getenv("STREAM_PORT", "8090"))
 CLIP_SECONDS = 12                # evidence clip length

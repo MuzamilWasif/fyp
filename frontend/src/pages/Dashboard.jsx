@@ -11,6 +11,28 @@ function Stat({ label, value, accent }) {
   )
 }
 
+function TrendChart({ data }) {
+  const entries = Object.entries(data || {})
+  if (entries.length === 0) return null
+  const max = Math.max(...entries.map(e => e[1]), 1)
+  const W = 640, H = 140, pad = 8
+  const step = (W - pad * 2) / (entries.length - 1 || 1)
+  const pts = entries.map(([, v], i) => [pad + i * step, H - pad - (v / max) * (H - pad * 2)])
+  const path = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0]},${p[1]}`).join(' ')
+  return (
+    <div className="card md:col-span-3">
+      <div className="font-semibold mb-2">Cases per month</div>
+      <svg viewBox={`0 0 ${W} ${H + 20}`} className="w-full">
+        <path d={`${path} L${pts[pts.length - 1][0]},${H - pad} L${pad},${H - pad} Z`} fill="rgba(163,230,53,0.08)" />
+        <path d={path} fill="none" stroke="#a3e635" strokeWidth="2" />
+        {pts.map((p, i) => <circle key={i} cx={p[0]} cy={p[1]} r="3" fill="#a3e635" />)}
+        {entries.map(([k], i) => (i % 2 === 0 &&
+          <text key={k} x={pad + i * step} y={H + 14} fontSize="9" fill="#737373" textAnchor="middle">{k.slice(2)}</text>))}
+      </svg>
+    </div>
+  )
+}
+
 function Breakdown({ title, data }) {
   const entries = Object.entries(data || {}).sort((a, b) => b[1] - a[1])
   const max = Math.max(...entries.map(e => e[1]), 1)
@@ -46,6 +68,7 @@ export default function Dashboard() {
         <Stat label="New AI alerts" value={stats?.new_alerts} accent="text-brand" />
       </div>
       <div className="grid md:grid-cols-3 gap-4">
+        <TrendChart data={stats?.monthly_trend} />
         <Breakdown title="Cases by status" data={stats?.by_status} />
         <Breakdown title="Cases by department" data={stats?.by_department} />
         <Breakdown title="Cases by violation type" data={stats?.by_violation} />
