@@ -267,7 +267,7 @@ export default function NewCase() {
                 type="checkbox"
                 checked={form.invigilator_signed}
                 onChange={set('invigilator_signed')}
-                className="mt-1 w-4 h-4 accent-[#a3e635] cursor-pointer"
+                className="mt-1 w-4 h-4 accent-[#2DE3A7] cursor-pointer"
               />
               <span className="text-muted">
                 I digitally sign this case as the reporting invigilator and confirm the details are accurate.

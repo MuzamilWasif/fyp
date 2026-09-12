@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -7,7 +7,7 @@
 @layer base {
   :root {
     color-scheme: dark;
-    --dur-fast: 150ms;
+    --dur-fast: 160ms;
     --dur: 200ms;
     --ease: cubic-bezier(.2, .8, .2, 1);
   }
@@ -15,11 +15,12 @@
   html { -webkit-text-size-adjust: 100%; }
 
   body {
-    @apply bg-bg text-fg font-sans text-body antialiased;
+    @apply bg-bg text-muted font-sans text-body antialiased;
     text-rendering: optimizeLegibility;
   }
 
-  /* Single, consistent focus treatment. Never removed, only shaped. */
+  h1, h2, h3, h4 { @apply font-display text-fg; }
+
   :focus { outline: none; }
   :focus-visible {
     outline: 2px solid theme('colors.brand.DEFAULT');
@@ -27,16 +28,14 @@
     border-radius: 4px;
   }
 
-  ::selection { background: theme('colors.brand.soft'); color: theme('colors.fg'); }
+  ::selection { background: rgba(45, 227, 167, .25); color: theme('colors.fg'); }
 
-  /* Scrollbars tuned to the surface palette */
-  * { scrollbar-width: thin; scrollbar-color: #333 transparent; }
+  * { scrollbar-width: thin; scrollbar-color: #2B3A4D transparent; }
   ::-webkit-scrollbar { width: 10px; height: 10px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: #2b2b2b; border-radius: 999px; border: 3px solid transparent; background-clip: content-box; }
-  ::-webkit-scrollbar-thumb:hover { background: #3a3a3a; background-clip: content-box; }
+  ::-webkit-scrollbar-thumb { background: #1E2937; border-radius: 999px; border: 3px solid transparent; background-clip: content-box; }
+  ::-webkit-scrollbar-thumb:hover { background: #2B3A4D; background-clip: content-box; }
 
-  /* Numeric UI never jitters between refreshes */
   .tnum { font-variant-numeric: tabular-nums; }
 
   @media (prefers-reduced-motion: reduce) {
@@ -49,71 +48,72 @@
   }
 }
 
-/* ------------------------------------------------------------ components */
 @layer components {
   /* --- surfaces --- */
-  .card { @apply bg-surface border border-line rounded-2xl p-5; }
+  .card { @apply bg-surface border border-line rounded-2xl p-6; }
   .card-tight { @apply bg-surface border border-line rounded-2xl p-4; }
-  .card-hover { @apply transition-colors duration-fast ease-smooth hover:border-line-strong hover:shadow-e1; }
+  .card-hover { @apply transition-colors duration-fast ease-out hover:border-line-strong; }
   .panel { @apply bg-surface-2 border border-line rounded-xl; }
+  .well { @apply bg-chrome border border-line rounded-xl; }
 
   /* --- buttons --- */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl font-medium text-body
-           whitespace-nowrap transition-colors duration-fast ease-smooth
+    @apply inline-flex items-center justify-center gap-2 h-9 px-3.5 rounded-xl font-medium text-small
+           whitespace-nowrap transition-colors duration-fast ease-out
            disabled:opacity-40 disabled:cursor-not-allowed select-none;
   }
-  .btn-sm { @apply px-3 py-1.5 text-small rounded-[10px] gap-1.5; }
-  .btn-icon { @apply p-2 rounded-xl; }
+  .btn-sm { @apply h-7 px-2.5 text-[11px] rounded-[9px] gap-1.5; }
+  .btn-icon { @apply w-9 px-0; }
   .btn-brand { @apply btn bg-brand text-brand-fg hover:bg-brand-hover active:bg-brand-press font-semibold; }
-  .btn-ghost { @apply btn bg-surface-2 text-fg border border-line hover:bg-surface-3 hover:border-line-strong; }
-  .btn-subtle { @apply btn bg-transparent text-muted hover:bg-surface-2 hover:text-fg; }
-  .btn-outline { @apply btn bg-transparent text-brand border border-brand/40 hover:bg-brand-soft; }
-  .btn-danger { @apply btn bg-danger-soft text-danger border border-danger/25 hover:bg-danger/25; }
+  .btn-ghost { @apply btn bg-transparent text-muted border border-line hover:bg-surface-2 hover:text-fg hover:border-line-strong; }
+  .btn-subtle { @apply btn bg-transparent text-subtle hover:bg-surface-2 hover:text-fg; }
+  .btn-outline { @apply btn bg-transparent text-brand border border-brand/35 hover:bg-brand hover:text-brand-fg hover:border-brand; }
+  .btn-danger { @apply btn bg-transparent text-danger border border-danger/35 hover:bg-danger hover:text-bg hover:border-danger; }
 
   /* --- form controls --- */
   .input {
-    @apply w-full bg-surface-2 border border-line rounded-xl px-3 py-2 text-body text-fg
-           placeholder:text-subtle transition-colors duration-fast ease-smooth
-           hover:border-line-strong focus:border-brand focus:outline-none
+    @apply w-full bg-chrome border border-line rounded-xl px-3 h-9 text-body text-fg
+           placeholder:text-faint transition-all duration-fast ease-out
+           hover:border-line-strong focus:border-brand focus:shadow-focus focus:outline-none
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
-  .input-error { @apply border-danger/60 focus:border-danger; }
-  .label { @apply block text-micro uppercase text-subtle mb-1.5 font-medium; }
-  .hint { @apply text-small text-subtle mt-1.5; }
-  .error-text { @apply text-small text-danger mt-1.5 flex items-center gap-1.5; }
+  textarea.input { @apply h-auto py-2.5 resize-y; }
+  select.input { @apply pr-9; }
+  .input-error { @apply border-danger/70 focus:border-danger focus:shadow-[0_0_0_3px_rgba(255,77,77,0.12)]; }
+  .label { @apply block font-mono text-micro uppercase text-subtle mb-1.5; }
+  .hint { @apply text-small text-faint mt-1.5; }
+  .error-text { @apply text-small text-danger mt-1.5 flex items-start gap-1.5; }
 
-  /* --- badges --- */
+  /* --- chips & badges: mono, tight, no border by default --- */
   .badge {
-    @apply inline-flex items-center gap-1 text-micro font-semibold px-2 py-0.5 rounded-full
-           whitespace-nowrap tracking-normal;
+    @apply inline-flex items-center gap-1 font-mono text-micro font-medium px-1.5 py-[3px]
+           rounded-[5px] uppercase whitespace-nowrap;
   }
-  .badge-neutral { @apply badge bg-surface-3 text-muted border border-line; }
-  .badge-brand   { @apply badge bg-brand-soft text-brand border border-brand/25; }
-  .badge-ok      { @apply badge bg-ok-soft text-ok border border-ok/25; }
-  .badge-warn    { @apply badge bg-warn-soft text-warn border border-warn/25; }
-  .badge-danger  { @apply badge bg-danger-soft text-danger border border-danger/25; }
-  .badge-info    { @apply badge bg-info-soft text-info border border-info/25; }
+  .badge-neutral { @apply badge bg-surface-2 text-muted border border-line; }
+  .badge-brand   { @apply badge bg-brand-soft text-brand; }
+  .badge-ok      { @apply badge bg-ok-soft text-ok; }
+  .badge-warn    { @apply badge bg-warn-soft text-warn; }
+  .badge-danger  { @apply badge bg-danger-soft text-danger; }
+  .badge-info    { @apply badge bg-info-soft text-info; }
 
   /* --- table --- */
-  .th { @apply text-left text-micro uppercase text-subtle font-medium py-2.5 px-3 whitespace-nowrap; }
-  .td { @apply py-3 px-3 text-body align-middle; }
-  .row-hover { @apply transition-colors duration-fast ease-smooth hover:bg-surface-2; }
+  .th { @apply text-left font-mono text-micro uppercase text-subtle py-3.5 px-4 whitespace-nowrap font-normal; }
+  .td { @apply py-3.5 px-4 text-body align-middle; }
+  .row-hover { @apply transition-colors duration-fast ease-out hover:bg-surface-2; }
 
-  /* --- skeleton (reserves exact height: no layout shift) --- */
-  .skeleton { @apply relative overflow-hidden bg-surface-2 rounded-lg; }
-  .skeleton::after {
-    content: '';
-    @apply absolute inset-0 -translate-x-full;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent);
-    animation: shimmer 1.4s infinite;
+  /* --- skeleton --- */
+  .skeleton { @apply bg-surface-3 rounded-lg animate-shimmer; }
+
+  /* --- status pill with a pulsing indicator --- */
+  .pill-live {
+    @apply inline-flex items-center gap-2 px-3 py-1.5 rounded-xl
+           bg-brand-soft border border-brand/20 font-mono text-micro uppercase text-brand;
   }
-  @media (prefers-reduced-motion: reduce) { .skeleton::after { animation: none; } }
 
   /* --- misc --- */
-  .link { @apply text-brand hover:text-brand-hover underline-offset-2 hover:underline transition-colors duration-fast; }
+  .link { @apply text-brand hover:text-brand-hover transition-colors duration-fast; }
   .divider { @apply border-t border-line; }
-  .kbd { @apply inline-flex items-center px-1.5 py-0.5 rounded-md bg-surface-3 border border-line text-micro text-muted font-mono; }
+  .kbd { @apply inline-flex items-center px-1.5 py-0.5 rounded-[5px] bg-surface-2 border border-line font-mono text-micro text-faint; }
 }
 
 /* ---------------------------------------------------- toast host (global) */

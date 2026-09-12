@@ -28,7 +28,17 @@ export default function Cases() {
   const [cases, setCases] = useState([])
   const [loading, setLoading] = useState(true)
   const [showFilters, setShowFilters] = useState(false)
-  const [filters, setFilters] = useState({ ...EMPTY_FILTERS, status: params.get('status') || '' })
+  const [filters, setFilters] = useState({
+    ...EMPTY_FILTERS,
+    q: params.get('q') || '',
+    status: params.get('status') || ''
+  })
+
+  // the topbar search navigates here with ?q=
+  useEffect(() => {
+    const q = params.get('q')
+    if (q !== null) setFilters((f) => (f.q === q ? f : { ...f, q }))
+  }, [params])
 
   useEffect(() => {
     let alive = true

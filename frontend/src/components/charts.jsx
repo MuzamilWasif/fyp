@@ -6,14 +6,15 @@ import { titleize, statusLabel } from '../lib/format'
 import EmptyState from './ui/EmptyState'
 import { BarChart3 } from 'lucide-react'
 
-export const AXIS = { stroke: '#6f6f6f', fontSize: 11, tickLine: false, axisLine: false }
-export const GRID = '#262626'
-export const SERIES = ['#a3e635', '#60a5fa', '#fbbf24', '#f87171', '#34d399', '#c084fc', '#f472b6', '#22d3ee']
+export const AXIS = { stroke: '#5A6472', fontSize: 10, tickLine: false, axisLine: false,
+  style: { fontFamily: "'JetBrains Mono', monospace" } }
+export const GRID = '#1E2937'
+export const SERIES = ['#2DE3A7', '#4D9FFF', '#FFB020', '#FF4D4D', '#7CF2CB', '#A78BFA', '#F472B6', '#22D3EE']
 
 function ChartTooltip({ active, payload, label, formatter }) {
   if (!active || !payload?.length) return null
   return (
-    <div className="bg-surface-3 border border-line rounded-xl shadow-e3 px-3 py-2">
+    <div className="bg-surface-2 border border-line rounded-xl shadow-e2 px-3 py-2">
       <div className="text-small font-semibold text-fg mb-1">{formatter ? formatter(label) : label}</div>
       {payload.map((p) => (
         <div key={p.dataKey || p.name} className="text-small text-muted flex items-center gap-2">
@@ -42,18 +43,18 @@ export function MonthlyCasesChart({ trend, height = 240 }) {
         <AreaChart data={data} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
           <defs>
             <linearGradient id="caseFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#a3e635" stopOpacity={0.28} />
-              <stop offset="100%" stopColor="#a3e635" stopOpacity={0} />
+              <stop offset="0%" stopColor="#2DE3A7" stopOpacity={0.28} />
+              <stop offset="100%" stopColor="#2DE3A7" stopOpacity={0} />
             </linearGradient>
           </defs>
           <CartesianGrid stroke={GRID} vertical={false} />
           <XAxis dataKey="label" {...AXIS} />
           <YAxis allowDecimals={false} width={40} {...AXIS} />
-          <Tooltip content={<ChartTooltip />} cursor={{ stroke: '#333' }} />
+          <Tooltip content={<ChartTooltip />} cursor={{ stroke: '#2B3A4D' }} />
           <Area
-            type="monotone" dataKey="cases" name="Cases" stroke="#a3e635" strokeWidth={2}
-            fill="url(#caseFill)" dot={{ r: 2.5, fill: '#a3e635', strokeWidth: 0 }}
-            activeDot={{ r: 4, fill: '#a3e635', stroke: '#0a0a0a', strokeWidth: 2 }}
+            type="monotone" dataKey="cases" name="Cases" stroke="#2DE3A7" strokeWidth={2}
+            fill="url(#caseFill)" dot={{ r: 2.5, fill: '#2DE3A7', strokeWidth: 0 }}
+            activeDot={{ r: 4, fill: '#2DE3A7', stroke: '#06090F', strokeWidth: 2 }}
             isAnimationActive={false}
           />
         </AreaChart>
@@ -73,7 +74,7 @@ function labelFor(kind) {
 
 /** Horizontal bars for a {key: count} map. Height grows with the row count so
  *  every category keeps its axis label. */
-export function BreakdownChart({ data, kind = 'plain', height, color = '#a3e635', max = 8 }) {
+export function BreakdownChart({ data, kind = 'plain', height, color = '#2DE3A7', max = 8 }) {
   const label = labelFor(kind)
   const rows = Object.entries(data || {})
     .filter(([, v]) => v > 0)
@@ -117,7 +118,7 @@ export function DonutChart({ data, kind = 'plain', height = 240 }) {
         <PieChart>
           <Pie
             data={rows} dataKey="value" nameKey="name" innerRadius="56%" outerRadius="80%"
-            paddingAngle={2} stroke="#0a0a0a" strokeWidth={2} isAnimationActive={false}
+            paddingAngle={2} stroke="#06090F" strokeWidth={2} isAnimationActive={false}
           >
             {rows.map((_, i) => <Cell key={i} fill={SERIES[i % SERIES.length]} />)}
           </Pie>

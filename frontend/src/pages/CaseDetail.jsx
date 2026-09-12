@@ -105,7 +105,7 @@ function EvidenceGallery({ items, onOpen }) {
               : <span className="badge-neutral">Manual</span>}
           </span>
           <span className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/85 to-transparent
-                           px-2 py-1.5 text-[10px] text-neutral-200 truncate">
+                           px-2 py-1.5 text-micro font-mono text-muted truncate">
             {ev.camera_id || ev.file_type} · {formatDate(ev.captured_at)}
           </span>
         </button>

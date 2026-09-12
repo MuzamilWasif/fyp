@@ -65,7 +65,7 @@ export default function Modal({ open, onClose, title, description, size = 'md', 
       >
         <header className="flex items-start justify-between gap-4 p-5 pb-3">
           <div className="min-w-0">
-            <h2 className="text-subtitle font-semibold text-fg">{title}</h2>
+            <h2 className="font-display text-subtitle font-semibold text-fg">{title}</h2>
             {description && <p className="text-small text-muted mt-1">{description}</p>}
           </div>
           <button

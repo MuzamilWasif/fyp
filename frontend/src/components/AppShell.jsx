@@ -9,7 +9,6 @@ import AlertBridge from './AlertBridge'
 export default function AppShell({ children }) {
   const { user, logout } = useAuth()
   const loc = useLocation()
-  const [collapsed, setCollapsed] = useState(false)
   const [drawer, setDrawer] = useState(false)
 
   // close the mobile drawer whenever the route changes
@@ -31,18 +30,9 @@ export default function AppShell({ children }) {
       </a>
 
       {/* desktop sidebar */}
-      <aside
-        className={`hidden lg:block shrink-0 transition-[width] duration-200 ease-smooth no-print
-                    ${collapsed ? 'w-[68px]' : 'w-[248px]'}`}
-      >
-        <div className={`fixed top-0 bottom-0 left-0 transition-[width] duration-200 ease-smooth
-                         ${collapsed ? 'w-[68px]' : 'w-[248px]'}`}>
-          <Sidebar
-            user={user}
-            collapsed={collapsed}
-            onToggle={() => setCollapsed((c) => !c)}
-            onSignOut={logout}
-          />
+      <aside className="hidden lg:block shrink-0 w-[72px] no-print">
+        <div className="fixed top-0 bottom-0 left-0 w-[72px]">
+          <Sidebar user={user} onSignOut={logout} />
         </div>
       </aside>
 
@@ -50,11 +40,10 @@ export default function AppShell({ children }) {
       {drawer && (
         <div className="lg:hidden fixed inset-0 z-[60] no-print">
           <div className="absolute inset-0 bg-black/70 animate-fade-in" onClick={() => setDrawer(false)} aria-hidden="true" />
-          <div className="absolute inset-y-0 left-0 w-[268px] shadow-e3 animate-slide-down">
+          <div className="absolute inset-y-0 left-0 shadow-e3 animate-slide-down">
             <Sidebar
               user={user}
-              collapsed={false}
-              onToggle={() => setDrawer(false)}
+              expanded
               onNavigate={() => setDrawer(false)}
               onSignOut={logout}
             />
@@ -64,7 +53,7 @@ export default function AppShell({ children }) {
 
       <div className="flex-1 min-w-0 flex flex-col">
         <Topbar user={user} onOpenSidebar={() => setDrawer(true)} onSignOut={logout} />
-        <main id="main-content" className="app-main flex-1 p-4 md:p-6 lg:p-8 pb-24 lg:pb-8 min-w-0">
+        <main id="main-content" className="app-main flex-1 px-4 py-6 md:px-8 md:py-7 pb-24 lg:pb-12 min-w-0">
           {children}
         </main>
       </div>
