@@ -1,5 +1,6 @@
 """End-to-end API tests: auth, RBAC, and the full UFM case lifecycle."""
 import os, sys, tempfile
+from datetime import datetime
 
 os.environ["DATABASE_URL"] = f"sqlite:///{tempfile.mkstemp(suffix='.db')[1]}"
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -305,3 +306,143 @@ def test_csv_export_rejects_unknown_status():
     r = client.get("/api/cases/export.csv", params={"status": "bogus"},
                    headers=login("examdept@au.edu.pk"))
     assert r.status_code == 422
+
+
+# --------------------------------------------------------------------------
+# Pagination, notifications, audit filters/export, analytics, input limits
+# --------------------------------------------------------------------------
+
+def test_case_list_pagination_reports_total_in_header():
+    ed = login("examdept@au.edu.pk")
+    full = client.get("/api/cases", headers=ed)
+    total = int(full.headers["X-Total-Count"])
+    assert total == len(full.json())
+    assert total >= 3
+
+    page = client.get("/api/cases", params={"limit": 2, "offset": 0}, headers=ed)
+    assert len(page.json()) == 2
+    assert int(page.headers["X-Total-Count"]) == total  # total ignores the page window
+
+    second = client.get("/api/cases", params={"limit": 2, "offset": 2}, headers=ed)
+    assert [c["id"] for c in second.json()] != [c["id"] for c in page.json()]
+
+
+def test_case_list_rejects_bad_pagination():
+    ed = login("examdept@au.edu.pk")
+    assert client.get("/api/cases", params={"limit": 0}, headers=ed).status_code == 422
+    assert client.get("/api/cases", params={"offset": -1}, headers=ed).status_code == 422
+
+
+def test_notifications_unread_count_and_mark_all_read():
+    _new_case()  # notifies the student
+    stu = login("student@au.edu.pk")
+
+    before = client.get("/api/notifications/unread-count", headers=stu).json()["unread"]
+    assert before >= 1
+
+    listed = client.get("/api/notifications", headers=stu)
+    assert int(listed.headers["X-Unread-Count"]) == before
+
+    r = client.post("/api/notifications/read-all", headers=stu)
+    assert r.status_code == 200 and r.json()["updated"] >= 1
+    assert client.get("/api/notifications/unread-count", headers=stu).json()["unread"] == 0
+
+    # idempotent
+    assert client.post("/api/notifications/read-all", headers=stu).json()["updated"] == 0
+
+
+def test_notification_read_is_scoped_to_its_owner():
+    _new_case()
+    stu = login("student@au.edu.pk")
+    mine = client.get("/api/notifications", headers=stu).json()
+    assert mine
+    other = login("hod@au.edu.pk")
+    assert client.post(f"/api/notifications/{mine[0]['id']}/read", headers=other).status_code == 404
+
+
+def test_audit_filters_and_pagination():
+    ed = login("examdept@au.edu.pk")
+    _new_case()
+
+    opts = client.get("/api/audit/filters", headers=ed).json()
+    assert "case_created" in opts["actions"]
+    assert "invigilator" in opts["roles"]
+
+    by_action = client.get("/api/audit", params={"action": "case_created"}, headers=ed)
+    assert by_action.status_code == 200
+    assert all(r["action"] == "case_created" for r in by_action.json())
+    assert int(by_action.headers["X-Total-Count"]) >= 1
+
+    by_role = client.get("/api/audit", params={"role": "invigilator"}, headers=ed).json()
+    assert all(r["user_role"] == "invigilator" for r in by_role)
+
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+    same_day = client.get("/api/audit", params={"date_from": today, "date_to": today}, headers=ed)
+    assert same_day.status_code == 200 and len(same_day.json()) >= 1
+
+    past = client.get("/api/audit", params={"date_to": "2001-01-01"}, headers=ed)
+    assert past.json() == []
+
+    paged = client.get("/api/audit", params={"limit": 1}, headers=ed)
+    assert len(paged.json()) == 1
+    assert int(paged.headers["X-Total-Count"]) > 1
+
+
+def test_audit_rejects_bad_dates():
+    ed = login("examdept@au.edu.pk")
+    assert client.get("/api/audit", params={"date_from": "12-2020"}, headers=ed).status_code == 422
+
+
+def test_audit_export_csv_and_permissions():
+    ed = login("examdept@au.edu.pk")
+    r = client.get("/api/audit/export.csv", headers=ed)
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("text/csv")
+    header, *rows = [l for l in r.text.splitlines() if l.strip()]
+    assert header.startswith("ID,Timestamp,Role")
+    assert rows
+
+    for who in ("invigilator@au.edu.pk", "student@au.edu.pk", "hod@au.edu.pk"):
+        assert client.get("/api/audit/export.csv", headers=login(who)).status_code == 403
+        assert client.get("/api/audit/filters", headers=login(who)).status_code == 403
+
+
+def test_analytics_is_scoped_and_grouped():
+    ed = login("examdept@au.edu.pk")
+    data = client.get("/api/dashboard/analytics", headers=ed).json()
+    assert data["scope"] == "institution"
+    assert data["totals"]["cases"] >= 1
+    assert data["by_semester"], "cases must be bucketed into a semester"
+    assert all(s.startswith(("Spring ", "Fall ")) for s in data["by_semester"])
+    assert set(data["matrix"]) == set(data["by_semester"])
+
+    # filtering by a semester narrows the totals
+    sem = data["filters"]["semesters"][0]
+    filtered = client.get("/api/dashboard/analytics", params={"semester": sem}, headers=ed).json()
+    assert filtered["totals"]["cases"] <= data["totals"]["cases"]
+    assert list(filtered["by_semester"]) == [sem]
+
+    # a student only ever sees their own record here too
+    stu = client.get("/api/dashboard/analytics", headers=login("student@au.edu.pk")).json()
+    assert stu["scope"] == "own"
+    assert stu["totals"]["cases"] <= data["totals"]["cases"]
+
+
+def test_input_length_limits_are_enforced():
+    inv = login("invigilator@au.edu.pk")
+    r = client.post("/api/cases", json={
+        "student_reg_no": "232430", "student_name": "Test Student",
+        "violation_type": "mobile_phone", "description": "x" * 2001,
+    }, headers=inv)
+    assert r.status_code == 422
+    # error shape is a plain sentence, same as every other failure
+    assert isinstance(r.json()["detail"], str)
+    assert "description" in r.json()["detail"]
+
+
+def test_alert_confidence_must_be_a_probability():
+    r = client.post("/api/alerts", json={
+        "camera_id": "CAM-A101-1", "label": "mobile_phone", "confidence": 7.5,
+    })
+    assert r.status_code == 422
+    assert isinstance(r.json()["detail"], str)

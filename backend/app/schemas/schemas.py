@@ -5,11 +5,11 @@ from pydantic import BaseModel, EmailStr, Field
 
 class UserCreate(BaseModel):
     email: EmailStr
-    full_name: str
-    password: str
-    role: str = "student"
-    department: str = ""
-    reg_no: str = ""
+    full_name: str = Field(min_length=1, max_length=120)
+    password: str = Field(min_length=8, max_length=128)
+    role: str = Field(default="student", max_length=32)
+    department: str = Field(default="", max_length=60)
+    reg_no: str = Field(default="", max_length=40)
 
 
 class UserOut(BaseModel):
@@ -57,19 +57,19 @@ class CaseActionOut(BaseModel):
 
 
 class CaseCreate(BaseModel):
-    student_reg_no: str
-    student_name: str
-    student_department: str = ""
-    exam_name: str = ""
-    exam_date: str = ""
-    exam_time: str = ""
-    room: str = ""
-    seat: str = ""
-    camera_id: str = ""
-    violation_type: str
-    description: str = ""
-    remarks: str = ""
-    source: str = "manual"
+    student_reg_no: str = Field(min_length=1, max_length=40)
+    student_name: str = Field(min_length=1, max_length=120)
+    student_department: str = Field(default="", max_length=60)
+    exam_name: str = Field(default="", max_length=160)
+    exam_date: str = Field(default="", max_length=32)
+    exam_time: str = Field(default="", max_length=32)
+    room: str = Field(default="", max_length=60)
+    seat: str = Field(default="", max_length=20)
+    camera_id: str = Field(default="", max_length=60)
+    violation_type: str = Field(min_length=1, max_length=60)
+    description: str = Field(default="", max_length=2000)
+    remarks: str = Field(default="", max_length=1000)
+    source: str = Field(default="manual", max_length=20)
     alert_id: Optional[int] = None
     invigilator_signed: bool = True
 
@@ -111,19 +111,21 @@ class StudentResponse(BaseModel):
 
 
 class CaseTransition(BaseModel):
-    action: str            # approve | return | forward | decide | hold | release_result | block_transcript | unblock_transcript | close | note
-    comment: str = ""
-    final_decision: str = ""
-    penalty: str = ""
+    # approve | return | forward | decide | hold | release_result |
+    # block_transcript | unblock_transcript | close | note
+    action: str = Field(min_length=1, max_length=32)
+    comment: str = Field(default="", max_length=2000)
+    final_decision: str = Field(default="", max_length=2000)
+    penalty: str = Field(default="", max_length=300)
 
 
 class AlertIn(BaseModel):
-    camera_id: str
-    room: str = ""
-    label: str
-    confidence: float
-    frame_count: int = 1
-    evidence_path: str = ""
+    camera_id: str = Field(min_length=1, max_length=60)
+    room: str = Field(default="", max_length=60)
+    label: str = Field(min_length=1, max_length=60)
+    confidence: float = Field(ge=0.0, le=1.0)
+    frame_count: int = Field(default=1, ge=1, le=100000)
+    evidence_path: str = Field(default="", max_length=500)
 
 
 class AlertOut(AlertIn):

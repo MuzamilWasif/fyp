@@ -50,10 +50,9 @@ export default function NotificationBell() {
   const markAll = async () => {
     if (!unread.length) return
     setBusy(true)
-    const ids = unread.map((n) => n.id)
-    setItems((prev) => prev.map((x) => ({ ...x, is_read: true })))
+    setItems((prev) => prev.map((x) => ({ ...x, is_read: true }))) // optimistic
     try {
-      await Promise.all(ids.map((id) => api.post(`/api/notifications/${id}/read`)))
+      await api.post('/api/notifications/read-all')
     } catch { load() } finally { setBusy(false) }
   }
 

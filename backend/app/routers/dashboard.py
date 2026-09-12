@@ -104,3 +104,103 @@ def stats(db: Session = Depends(get_db), user: User = Depends(get_current_user))
         "by_department": by_dept,
         "by_violation": by_violation,
     }
+
+
+# ---------------------------------------------------------------------------
+# Examination Department analytics
+# ---------------------------------------------------------------------------
+
+def _semester_of(case: UFMCase) -> str:
+    """Derive the academic semester from the examination date.
+
+    The case record has no semester column and adding one would require a
+    migration against the live database, so it is derived here: January-June
+    is Spring, July-December is Fall, falling back to the reporting date when
+    the exam date was left blank.
+    """
+    raw = (case.exam_date or "")[:10]
+    dt = None
+    if raw:
+        for fmt in ("%Y-%m-%d", "%d-%m-%Y", "%d/%m/%Y"):
+            try:
+                dt = datetime.strptime(raw, fmt)
+                break
+            except ValueError:
+                continue
+    if dt is None:
+        dt = case.created_at or datetime.utcnow()
+    return f"{'Spring' if dt.month <= 6 else 'Fall'} {dt.year}"
+
+
+@router.get("/analytics")
+def analytics(semester: str | None = None, department: str | None = None,
+              db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Semester- and department-wise breakdowns for the Examination Department.
+
+    Scoped exactly like every other view, so a HOD calling it sees their own
+    department and nothing more.
+    """
+    cases = scope_cases(db.query(UFMCase), user).all()
+
+    enriched = [(c, _semester_of(c)) for c in cases]
+    semesters = sorted({s for _, s in enriched}, key=_semester_sort_key, reverse=True)
+    departments = sorted({c.student_department for c in cases if c.student_department})
+
+    if semester:
+        enriched = [(c, s) for c, s in enriched if s == semester]
+    if department:
+        enriched = [(c, s) for c, s in enriched if c.student_department == department]
+
+    selected = [c for c, _ in enriched]
+    decided = [c for c in selected if c.status in (CaseStatus.DECIDED, CaseStatus.CLOSED)]
+
+    def tally(pairs):
+        out = {}
+        for key in pairs:
+            if key in (None, ""):
+                key = "Unspecified"
+            out[key] = out.get(key, 0) + 1
+        return out
+
+    by_semester = tally([s for _, s in enriched])
+    by_department = tally([c.student_department for c in selected])
+    by_violation = tally([c.violation_type for c in selected])
+    by_status = tally([c.status.value if hasattr(c.status, "value") else c.status for c in selected])
+    by_penalty = tally([c.penalty for c in decided if c.penalty])
+    by_source = tally([c.source for c in selected])
+
+    # semester x department matrix, for the cross-tab table
+    matrix = {}
+    for c, s in enriched:
+        dept = c.student_department or "Unspecified"
+        matrix.setdefault(s, {})
+        matrix[s][dept] = matrix[s].get(dept, 0) + 1
+
+    return {
+        "scope": scope_label(user),
+        "filters": {"semesters": semesters, "departments": departments,
+                    "semester": semester, "department": department},
+        "totals": {
+            "cases": len(selected),
+            "decided": len(decided),
+            "result_holds": sum(1 for c in selected if c.result_hold),
+            "transcript_blocks": sum(1 for c in selected if c.transcript_blocked),
+            "ai_detected": sum(1 for c in selected if c.source == "ai"),
+        },
+        "by_semester": by_semester,
+        "by_department": by_department,
+        "by_violation": by_violation,
+        "by_status": by_status,
+        "by_penalty": by_penalty,
+        "by_source": by_source,
+        "matrix": matrix,
+    }
+
+
+def _semester_sort_key(label: str):
+    """'Fall 2026' sorts after 'Spring 2026'."""
+    try:
+        term, year = label.split(" ")
+        return (int(year), 1 if term == "Fall" else 0)
+    except (ValueError, AttributeError):
+        return (0, 0)

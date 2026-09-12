@@ -1,6 +1,9 @@
 import os
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from .database import Base, engine
 from .config import settings
@@ -25,7 +28,23 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"], allow_credentials=True,
     allow_methods=["*"], allow_headers=["*"],
+    # pagination totals travel in headers so list responses keep their shape
+    expose_headers=["X-Total-Count", "X-Unread-Count", "Content-Disposition"],
 )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error_handler(request: Request, exc: RequestValidationError):
+    """Give validation failures the same {"detail": "<sentence>"} shape as every
+    other error, so clients never have to branch on the error format."""
+    first = (exc.errors() or [{}])[0]
+    field = ".".join(str(p) for p in first.get("loc", []) if p not in ("body", "query"))
+    message = first.get("msg", "Invalid request")
+    return JSONResponse(
+        status_code=422,
+        content={"detail": f"{field}: {message}" if field else message,
+                 "errors": jsonable_encoder(exc.errors())},
+    )
 
 app.include_router(auth.router)
 app.include_router(cases.router)

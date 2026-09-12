@@ -2,7 +2,7 @@ import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   BarChart, Bar, Cell, PieChart, Pie, Legend
 } from 'recharts'
-import { humanize, statusLabel } from '../lib/format'
+import { titleize, statusLabel } from '../lib/format'
 import EmptyState from './ui/EmptyState'
 import { BarChart3 } from 'lucide-react'
 
@@ -62,24 +62,36 @@ export function MonthlyCasesChart({ trend, height = 240 }) {
   )
 }
 
-/** Horizontal bars for a {key: count} map. */
-export function BreakdownChart({ data, kind = 'plain', height = 220, color = '#a3e635' }) {
-  const label = kind === 'status' ? statusLabel : humanize
+const SOURCE_LABELS = { ai: 'AI engine', manual: 'Manual report' }
+
+/** One place that decides how a category key is written out. */
+function labelFor(kind) {
+  if (kind === 'status') return statusLabel
+  if (kind === 'source') return (k) => SOURCE_LABELS[k] || titleize(k)
+  return (k) => titleize(k)
+}
+
+/** Horizontal bars for a {key: count} map. Height grows with the row count so
+ *  every category keeps its axis label. */
+export function BreakdownChart({ data, kind = 'plain', height, color = '#a3e635', max = 8 }) {
+  const label = labelFor(kind)
   const rows = Object.entries(data || {})
     .filter(([, v]) => v > 0)
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 8)
+    .slice(0, max)
     .map(([k, v], i) => ({ name: label(k) || 'Unspecified', value: v, fill: kind === 'status' ? SERIES[i % SERIES.length] : color }))
 
   if (!rows.length) return <EmptyState icon={BarChart3} title="Nothing to chart yet" description="Data appears once cases are recorded." className="py-8" />
 
+  const computed = height ?? Math.max(160, rows.length * 34 + 36)
+
   return (
-    <div style={{ height }}>
+    <div style={{ height: computed }}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={rows} layout="vertical" margin={{ top: 0, right: 16, left: 0, bottom: 0 }} barCategoryGap={8}>
           <CartesianGrid stroke={GRID} horizontal={false} />
           <XAxis type="number" allowDecimals={false} {...AXIS} />
-          <YAxis type="category" dataKey="name" width={124} {...AXIS} />
+          <YAxis type="category" dataKey="name" width={132} interval={0} {...AXIS} />
           <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
           <Bar dataKey="value" name="Cases" radius={[0, 6, 6, 0]} maxBarSize={26} isAnimationActive={false}>
             {rows.map((r, i) => <Cell key={i} fill={r.fill} />)}
@@ -92,7 +104,7 @@ export function BreakdownChart({ data, kind = 'plain', height = 220, color = '#a
 
 /** Donut for categorical share. */
 export function DonutChart({ data, kind = 'plain', height = 240 }) {
-  const label = kind === 'status' ? statusLabel : humanize
+  const label = labelFor(kind)
   const rows = Object.entries(data || {})
     .filter(([, v]) => v > 0)
     .map(([k, v]) => ({ name: label(k) || 'Unspecified', value: v }))

@@ -67,14 +67,24 @@ def create_case(payload: CaseCreate, db: Session = Depends(get_db),
     return case
 
 
+MAX_PAGE = 500
+
+
 @router.get("", response_model=list[CaseOut])
 def list_cases(status: str | None = None, pending: bool = False,
+               limit: int | None = None, offset: int = 0,
+               response: Response = None,
                db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     """Cases visible to the caller.
 
-    `pending=true` narrows the list to the cases that are waiting on the
-    caller's own role — the "needs your action" queue.
+    `pending=true` narrows the list to the cases waiting on the caller's own
+    role — the "needs your action" queue. `limit`/`offset` paginate; the body
+    stays a plain list for backward compatibility and the total row count for
+    the current filter travels in the X-Total-Count header.
     """
+    if offset < 0 or (limit is not None and limit < 1):
+        raise HTTPException(422, "limit must be >= 1 and offset >= 0")
+
     q = scope_cases(db.query(UFMCase), user)
     if status:
         try:
@@ -84,9 +94,21 @@ def list_cases(status: str | None = None, pending: bool = False,
     if pending:
         waiting = pending_statuses(user)
         if not waiting:
+            if response is not None:
+                response.headers["X-Total-Count"] = "0"
             return []
         q = q.filter(UFMCase.status.in_(waiting))
-    return q.order_by(UFMCase.created_at.desc()).all()
+
+    total = q.count()
+    if response is not None:
+        response.headers["X-Total-Count"] = str(total)
+
+    q = q.order_by(UFMCase.created_at.desc())
+    if limit is not None:
+        q = q.offset(offset).limit(min(limit, MAX_PAGE))
+    elif offset:
+        q = q.offset(offset)
+    return q.all()
 
 
 EXPORT_COLUMNS = [
