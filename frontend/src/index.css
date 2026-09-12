@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -118,6 +118,119 @@
 
 /* ---------------------------------------------------- toast host (global) */
 .toast-wrap { @apply fixed z-[80] flex flex-col gap-2 bottom-24 right-4 left-4 sm:left-auto sm:bottom-6 sm:right-6 sm:w-96; }
+
+/* ------------------------------------------------- sign-in (control room)
+   The sign-in screen follows its own design: a colder, deeper palette with a
+   mint accent, scoped entirely to .ve-login so the portal's lime theme is
+   untouched. */
+.ve-login {
+  --ve-bg: #06090F;
+  --ve-panel: #0D131C;
+  --ve-card: #121A26;
+  --ve-line: #1E2937;
+  --ve-accent: #2DE3A7;
+  --ve-accent-hover: #4BEBB6;
+  --ve-text: #F5F7FA;
+  --ve-text-2: #B8C2D0;
+  --ve-text-3: #8A94A6;
+  --ve-text-4: #5A6472;
+  --ve-danger: #FF4D4D;
+
+  background: var(--ve-bg);
+  color: var(--ve-text);
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.ve-display { font-family: 'Space Grotesk', system-ui, sans-serif; }
+.ve-mono {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+/* dual grid + film grain of the camera view */
+.ve-grid-lg {
+  background-image:
+    linear-gradient(rgba(30, 41, 55, .55) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(30, 41, 55, .55) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+.ve-grid-sm {
+  background-image:
+    linear-gradient(rgba(30, 41, 55, .28) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(30, 41, 55, .28) 1px, transparent 1px);
+  background-size: 12px 12px;
+}
+.ve-noise {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* form controls */
+.ve-input {
+  width: 100%;
+  height: 46px;
+  box-sizing: border-box;
+  padding: 0 14px 0 40px;
+  background: var(--ve-panel);
+  border: 1px solid var(--ve-line);
+  border-radius: 12px;
+  color: var(--ve-text);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 160ms ease-out, box-shadow 160ms ease-out;
+}
+.ve-input::placeholder { color: var(--ve-text-4); }
+.ve-input:focus {
+  border-color: var(--ve-accent);
+  box-shadow: 0 0 0 3px rgba(45, 227, 167, .14);
+}
+.ve-input[aria-invalid='true'] {
+  border-color: var(--ve-danger);
+  box-shadow: 0 0 0 3px rgba(255, 77, 77, .12);
+}
+.ve-input:focus-visible { outline: none; }
+.ve-password { letter-spacing: .12em; }
+.ve-password::placeholder { letter-spacing: normal; }
+
+.ve-submit {
+  width: 100%;
+  height: 48px;
+  background: var(--ve-accent);
+  border: none;
+  border-radius: 12px;
+  color: var(--ve-bg);
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: -.01em;
+  cursor: pointer;
+  transition: background 160ms ease-out, transform 160ms ease-out;
+}
+.ve-submit:hover:not(:disabled) { background: var(--ve-accent-hover); }
+.ve-submit:active:not(:disabled) { transform: translateY(1px); }
+.ve-submit:disabled { opacity: .6; cursor: not-allowed; }
+
+.ve-login a, .ve-link { color: var(--ve-text-3); transition: color 160ms ease-out; }
+.ve-login a:hover, .ve-link:hover { color: var(--ve-accent); }
+.ve-login :focus-visible { outline: 2px solid var(--ve-accent); outline-offset: 2px; }
+
+/* the pulsing LIVE indicator */
+@keyframes vePulse {
+  0% { opacity: 1; transform: scale(1) }
+  50% { opacity: .35; transform: scale(.82) }
+  100% { opacity: 1; transform: scale(1) }
+}
+@keyframes veRing {
+  0% { opacity: .5; transform: scale(.6) }
+  70%, 100% { opacity: 0; transform: scale(2.4) }
+}
+.ve-pulse { animation: vePulse 1.6s ease-out infinite; }
+.ve-ring { animation: veRing 1.6s ease-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .ve-pulse, .ve-ring { animation: none; }
+  .ve-ring { opacity: 0; }
+}
 
 /* -------------------------------------------- official printed UFM report */
 .print-only { display: none; }
