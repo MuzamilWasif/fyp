@@ -1,0 +1,137 @@
+/** Shared label, tone and formatting helpers so no two screens disagree. */
+
+export const ROLE_LABELS = {
+  admin: 'Administrator',
+  invigilator: 'Invigilator',
+  hod: 'Head of Department',
+  dec: 'Departmental Examination Committee',
+  exam_dept: 'Examination Department',
+  ufm_committee: 'UFM Committee',
+  student: 'Student'
+}
+
+export const ROLE_SHORT = {
+  admin: 'Admin', invigilator: 'Invigilator', hod: 'HOD', dec: 'DEC',
+  exam_dept: 'Exam Dept', ufm_committee: 'UFM Committee', student: 'Student'
+}
+
+export const STATUS_LABELS = {
+  draft: 'Draft',
+  submitted: 'Submitted',
+  hod_approved: 'HOD approved',
+  hod_returned: 'Returned by HOD',
+  dec_forwarded: 'Forwarded by DEC',
+  exam_dept_forwarded: 'With UFM Committee',
+  under_committee_review: 'Under committee review',
+  decided: 'Decided',
+  closed: 'Closed'
+}
+
+/** badge class per case status */
+export const STATUS_TONE = {
+  draft: 'badge-neutral',
+  submitted: 'badge-warn',
+  hod_approved: 'badge-info',
+  hod_returned: 'badge-danger',
+  dec_forwarded: 'badge-info',
+  exam_dept_forwarded: 'badge-brand',
+  under_committee_review: 'badge-brand',
+  decided: 'badge-ok',
+  closed: 'badge-neutral'
+}
+
+export const ALL_STATUSES = [
+  'submitted', 'hod_approved', 'hod_returned', 'dec_forwarded',
+  'exam_dept_forwarded', 'under_committee_review', 'decided', 'closed'
+]
+
+export const VIOLATION_TYPES = [
+  'mobile_phone', 'smart_watch', 'electronic_device', 'notes_paper',
+  'paper_exchange', 'talking_communication', 'looking_around',
+  'impersonation', 'other'
+]
+
+export const PENALTY_OPTIONS = [
+  'Warning',
+  'F grade in course',
+  'F grade in all courses',
+  'One semester suspension',
+  'Expulsion recommendation'
+]
+
+/** The stage each status is waiting on — drives the "needs your action" queues. */
+export const PENDING_ROLE = {
+  submitted: 'hod',
+  hod_returned: 'invigilator',
+  hod_approved: 'dec',
+  dec_forwarded: 'exam_dept',
+  exam_dept_forwarded: 'ufm_committee',
+  under_committee_review: 'ufm_committee',
+  decided: 'exam_dept'
+}
+
+/** Statuses a given role must act on right now. */
+export const ACTION_STATUSES = {
+  hod: ['submitted'],
+  dec: ['hod_approved'],
+  exam_dept: ['dec_forwarded', 'decided'],
+  ufm_committee: ['exam_dept_forwarded', 'under_committee_review'],
+  invigilator: ['hod_returned'],
+  admin: ['submitted', 'hod_approved', 'dec_forwarded', 'exam_dept_forwarded'],
+  student: [],
+  dec_member: []
+}
+
+export const titleize = (s) => (s || '').replaceAll('_', ' ').replace(/\b\w/g, (m) => m.toUpperCase())
+export const humanize = (s) => (s || '').replaceAll('_', ' ')
+export const statusLabel = (s) => STATUS_LABELS[s] || humanize(s)
+export const roleLabel = (r) => ROLE_SHORT[r] || humanize(r)
+
+/** Severity 0..1 → tone used by alerts, monitoring and case badges alike. */
+export function severityTone(sev) {
+  const pct = (sev || 0) * 100
+  if (pct >= 70) return { key: 'critical', label: 'Critical', badge: 'badge-danger', text: 'text-danger', bar: 'bg-danger', ring: 'border-danger/40' }
+  if (pct >= 50) return { key: 'elevated', label: 'Elevated', badge: 'badge-warn', text: 'text-warn', bar: 'bg-warn', ring: 'border-warn/40' }
+  return { key: 'low', label: 'Low', badge: 'badge-neutral', text: 'text-muted', bar: 'bg-brand', ring: 'border-line' }
+}
+
+export const pct = (v) => `${Math.round((v || 0) * 100)}%`
+
+export function formatDate(value, opts = {}) {
+  if (!value) return '—'
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return String(value)
+  return d.toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric', ...opts })
+}
+
+export function formatDateTime(value) {
+  if (!value) return '—'
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return String(value)
+  return d.toLocaleString(undefined, {
+    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+  })
+}
+
+export function timeAgo(value) {
+  if (!value) return ''
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return ''
+  const secs = Math.floor((Date.now() - d.getTime()) / 1000)
+  if (secs < 45) return 'just now'
+  const units = [['y', 31536000], ['mo', 2592000], ['d', 86400], ['h', 3600], ['m', 60]]
+  for (const [label, size] of units) {
+    if (secs >= size) return `${Math.floor(secs / size)}${label} ago`
+  }
+  return `${secs}s ago`
+}
+
+/** Turn an axios error into one readable sentence. */
+export function errorMessage(err, fallback = 'Something went wrong') {
+  const d = err?.response?.data?.detail
+  if (typeof d === 'string') return d
+  if (Array.isArray(d) && d.length) return d[0]?.msg || fallback
+  if (err?.response?.status === 403) return 'You do not have permission to do that'
+  if (err?.response?.status === 404) return 'Not found'
+  return err?.message === 'Network Error' ? 'Cannot reach the server' : fallback
+}

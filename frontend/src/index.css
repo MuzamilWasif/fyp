@@ -3,30 +3,147 @@
 @tailwind components;
 @tailwind utilities;
 
-:root { color-scheme: dark; }
-body { font-family: 'Sora', system-ui, sans-serif; }
+/* ------------------------------------------------------------------ base */
+@layer base {
+  :root {
+    color-scheme: dark;
+    --dur-fast: 150ms;
+    --dur: 200ms;
+    --ease: cubic-bezier(.2, .8, .2, 1);
+  }
 
-.card { @apply bg-panel border border-neutral-800/80 rounded-2xl p-4; }
-.btn { @apply px-4 py-2 rounded-xl font-medium text-sm transition-colors disabled:opacity-40; }
-.btn-brand { @apply btn bg-brand text-black hover:bg-lime-300; }
-.btn-ghost { @apply btn bg-neutral-800/80 hover:bg-neutral-700; }
-.btn-danger { @apply btn bg-red-500/15 text-red-400 hover:bg-red-500/25; }
-.input { @apply w-full bg-neutral-900 border border-neutral-700/70 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-brand transition-colors; }
-.badge { @apply text-xs px-2 py-0.5 rounded-full font-semibold whitespace-nowrap; }
-.th { @apply text-left text-neutral-500 text-xs font-medium py-2; }
+  html { -webkit-text-size-adjust: 100%; }
 
-/* toast */
-.toast-wrap { @apply fixed bottom-6 right-6 z-50 flex flex-col gap-2; }
-.toast { @apply bg-panel border border-brand/40 rounded-xl px-4 py-3 shadow-lg shadow-black/40 max-w-sm; animation: toast-in .25s ease-out; }
-@keyframes toast-in { from { transform: translateY(12px); opacity: 0 } to { transform: none; opacity: 1 } }
-@media (prefers-reduced-motion: reduce) { .toast { animation: none } }
+  body {
+    @apply bg-bg text-fg font-sans text-body antialiased;
+    text-rendering: optimizeLegibility;
+  }
 
-/* printable case report */
-@media print {
-  body { background: #fff; color: #000; font-family: Georgia, serif; }
-  aside, .no-print { display: none !important; }
-  main { padding: 0 !important; }
-  .card { border: 1px solid #ccc; border-radius: 0; background: #fff; page-break-inside: avoid; }
-  .badge { border: 1px solid #999; color: #000 !important; background: #fff !important; }
-  video, input, textarea, button, select { display: none !important; }
+  /* Single, consistent focus treatment. Never removed, only shaped. */
+  :focus { outline: none; }
+  :focus-visible {
+    outline: 2px solid theme('colors.brand.DEFAULT');
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::selection { background: theme('colors.brand.soft'); color: theme('colors.fg'); }
+
+  /* Scrollbars tuned to the surface palette */
+  * { scrollbar-width: thin; scrollbar-color: #333 transparent; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #2b2b2b; border-radius: 999px; border: 3px solid transparent; background-clip: content-box; }
+  ::-webkit-scrollbar-thumb:hover { background: #3a3a3a; background-clip: content-box; }
+
+  /* Numeric UI never jitters between refreshes */
+  .tnum { font-variant-numeric: tabular-nums; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: .01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: .01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }
+
+/* ------------------------------------------------------------ components */
+@layer components {
+  /* --- surfaces --- */
+  .card { @apply bg-surface border border-line rounded-2xl p-5; }
+  .card-tight { @apply bg-surface border border-line rounded-2xl p-4; }
+  .card-hover { @apply transition-colors duration-fast ease-smooth hover:border-line-strong hover:shadow-e1; }
+  .panel { @apply bg-surface-2 border border-line rounded-xl; }
+
+  /* --- buttons --- */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl font-medium text-body
+           whitespace-nowrap transition-colors duration-fast ease-smooth
+           disabled:opacity-40 disabled:cursor-not-allowed select-none;
+  }
+  .btn-sm { @apply px-3 py-1.5 text-small rounded-[10px] gap-1.5; }
+  .btn-icon { @apply p-2 rounded-xl; }
+  .btn-brand { @apply btn bg-brand text-brand-fg hover:bg-brand-hover active:bg-brand-press font-semibold; }
+  .btn-ghost { @apply btn bg-surface-2 text-fg border border-line hover:bg-surface-3 hover:border-line-strong; }
+  .btn-subtle { @apply btn bg-transparent text-muted hover:bg-surface-2 hover:text-fg; }
+  .btn-outline { @apply btn bg-transparent text-brand border border-brand/40 hover:bg-brand-soft; }
+  .btn-danger { @apply btn bg-danger-soft text-danger border border-danger/25 hover:bg-danger/25; }
+
+  /* --- form controls --- */
+  .input {
+    @apply w-full bg-surface-2 border border-line rounded-xl px-3 py-2 text-body text-fg
+           placeholder:text-subtle transition-colors duration-fast ease-smooth
+           hover:border-line-strong focus:border-brand focus:outline-none
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .input-error { @apply border-danger/60 focus:border-danger; }
+  .label { @apply block text-micro uppercase text-subtle mb-1.5 font-medium; }
+  .hint { @apply text-small text-subtle mt-1.5; }
+  .error-text { @apply text-small text-danger mt-1.5 flex items-center gap-1.5; }
+
+  /* --- badges --- */
+  .badge {
+    @apply inline-flex items-center gap-1 text-micro font-semibold px-2 py-0.5 rounded-full
+           whitespace-nowrap tracking-normal;
+  }
+  .badge-neutral { @apply badge bg-surface-3 text-muted border border-line; }
+  .badge-brand   { @apply badge bg-brand-soft text-brand border border-brand/25; }
+  .badge-ok      { @apply badge bg-ok-soft text-ok border border-ok/25; }
+  .badge-warn    { @apply badge bg-warn-soft text-warn border border-warn/25; }
+  .badge-danger  { @apply badge bg-danger-soft text-danger border border-danger/25; }
+  .badge-info    { @apply badge bg-info-soft text-info border border-info/25; }
+
+  /* --- table --- */
+  .th { @apply text-left text-micro uppercase text-subtle font-medium py-2.5 px-3 whitespace-nowrap; }
+  .td { @apply py-3 px-3 text-body align-middle; }
+  .row-hover { @apply transition-colors duration-fast ease-smooth hover:bg-surface-2; }
+
+  /* --- skeleton (reserves exact height: no layout shift) --- */
+  .skeleton { @apply relative overflow-hidden bg-surface-2 rounded-lg; }
+  .skeleton::after {
+    content: '';
+    @apply absolute inset-0 -translate-x-full;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent);
+    animation: shimmer 1.4s infinite;
+  }
+  @media (prefers-reduced-motion: reduce) { .skeleton::after { animation: none; } }
+
+  /* --- misc --- */
+  .link { @apply text-brand hover:text-brand-hover underline-offset-2 hover:underline transition-colors duration-fast; }
+  .divider { @apply border-t border-line; }
+  .kbd { @apply inline-flex items-center px-1.5 py-0.5 rounded-md bg-surface-3 border border-line text-micro text-muted font-mono; }
+}
+
+/* ---------------------------------------------------- toast host (global) */
+.toast-wrap { @apply fixed z-[80] flex flex-col gap-2 bottom-24 right-4 left-4 sm:left-auto sm:bottom-6 sm:right-6 sm:w-96; }
+
+/* -------------------------------------------- official printed UFM report */
+@media print {
+  @page { size: A4; margin: 16mm 14mm; }
+
+  body { background: #fff !important; color: #000 !important; font-family: Georgia, 'Times New Roman', serif; font-size: 11pt; }
+  .no-print, aside, nav, header.app-topbar, .toast-wrap { display: none !important; }
+  main, .app-main { padding: 0 !important; margin: 0 !important; overflow: visible !important; }
+  .print-only { display: block !important; }
+
+  .card, .card-tight, .panel {
+    background: #fff !important; color: #000 !important;
+    border: 1px solid #bbb !important; border-radius: 0 !important;
+    padding: 10pt !important; page-break-inside: avoid;
+  }
+  .badge { border: 1px solid #777 !important; color: #000 !important; background: #fff !important; border-radius: 2pt; }
+  a { color: #000 !important; text-decoration: none !important; }
+  h1, h2, h3 { color: #000 !important; }
+  .text-muted, .text-subtle, [class*='text-neutral'] { color: #333 !important; }
+  .text-brand, [class*='text-brand'] { color: #000 !important; }
+
+  video, input, textarea, select, button { display: none !important; }
+  img { max-width: 46% !important; break-inside: avoid; filter: grayscale(100%); }
+
+  /* grid collapses to a readable single flow on paper */
+  .print-block { display: block !important; }
+  .print-cols { column-count: 2; column-gap: 18pt; }
+}
+.print-only { display: none; }
