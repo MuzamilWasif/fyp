@@ -7,7 +7,7 @@ import {
 import api from '../lib/api'
 import { useAuth } from '../lib/auth'
 import {
-  ALL_STATUSES, VIOLATION_TYPES, statusLabel, humanize, formatDate,
+  ALL_STATUSES, VIOLATION_TYPES, statusLabel, humanize, titleize, formatDate,
   timeAgo, ACTION_STATUSES, errorMessage
 } from '../lib/format'
 import { useToast } from '../lib/toast'
@@ -240,7 +240,7 @@ export default function Cases() {
             </Select>
             <Select label="Violation" value={filters.violation} onChange={set('violation')}>
               <option value="">Any violation</option>
-              {VIOLATION_TYPES.map((v) => <option key={v} value={v}>{humanize(v)}</option>)}
+              {VIOLATION_TYPES.map((v) => <option key={v} value={v}>{titleize(v)}</option>)}
             </Select>
             <Select label="Department" value={filters.department} onChange={set('department')}>
               <option value="">Any department</option>
