@@ -13,33 +13,46 @@ import { PageHeader, Card, Button, EmptyState, Skeleton, Modal } from '../compon
 const POLL_MS = 20000
 
 function CameraTile({ cam, live, onExpand }) {
+  // A camera can be configured and still be unreachable — the detection engine
+  // may simply not be running. Show that plainly instead of a broken image.
+  const [failed, setFailed] = useState(false)
+  const streaming = live && !failed
+
   return (
     <figure className="bg-surface border border-line rounded-2xl overflow-hidden group">
       <div className="relative aspect-video bg-surface-2">
-        {live ? (
-          <>
-            {/* MJPEG stream served by the on-premises detection engine */}
-            <img src={cam.stream_url} alt={`Live feed from ${cam.camera_id}`}
-                 className="w-full h-full object-cover" />
-            <button
-              onClick={() => onExpand(cam)}
-              aria-label={`Expand ${cam.camera_id}`}
-              className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30
-                         opacity-0 group-hover:opacity-100 transition-all duration-fast"
-            >
-              <span className="btn-ghost btn-sm"><Maximize2 size={14} aria-hidden="true" /> Expand</span>
-            </button>
-          </>
+        {live && (
+          <img
+            src={cam.stream_url}
+            alt={`Live feed from ${cam.camera_id}`}
+            onError={() => setFailed(true)}
+            onLoad={() => setFailed(false)}
+            className={`w-full h-full object-cover ${failed ? 'hidden' : ''}`}
+          />
+        )}
+
+        {streaming ? (
+          <button
+            onClick={() => onExpand(cam)}
+            aria-label={`Expand ${cam.camera_id}`}
+            className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30
+                       opacity-0 group-hover:opacity-100 transition-all duration-fast"
+          >
+            <span className="btn-ghost btn-sm"><Maximize2 size={14} aria-hidden="true" /> Expand</span>
+          </button>
         ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-subtle">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-subtle px-4 text-center">
             <VideoOff size={22} aria-hidden="true" />
-            <span className="text-small">No stream configured</span>
+            <span className="text-small">
+              {!live ? 'No stream configured'
+                     : 'Stream unreachable — is the detection engine running?'}
+            </span>
           </div>
         )}
 
-        <span className={`absolute top-2 left-2 badge ${live ? 'badge-danger' : 'badge-neutral'}`}>
-          <Circle size={7} className={live ? 'fill-current' : ''} aria-hidden="true" />
-          {live ? 'LIVE' : 'OFFLINE'}
+        <span className={`absolute top-2 left-2 badge ${streaming ? 'badge-danger' : failed ? 'badge-warn' : 'badge-neutral'}`}>
+          <Circle size={7} className={streaming ? 'fill-current' : ''} aria-hidden="true" />
+          {streaming ? 'LIVE' : failed ? 'UNREACHABLE' : 'OFFLINE'}
         </span>
       </div>
       <figcaption className="flex items-center justify-between gap-2 px-3 py-2.5">
@@ -100,8 +113,10 @@ export default function LiveMonitoring() {
       />
 
       <div className="flex flex-wrap items-center gap-3 mb-4 text-small">
-        <span className="badge-ok"><Video size={11} aria-hidden="true" />{live.length} live</span>
-        <span className="badge-neutral"><VideoOff size={11} aria-hidden="true" />{offline.length} offline</span>
+        {/* these count configuration, not reachability — each tile reports whether
+            its stream actually answered */}
+        <span className="badge-ok"><Video size={11} aria-hidden="true" />{live.length} stream configured</span>
+        <span className="badge-neutral"><VideoOff size={11} aria-hidden="true" />{offline.length} without a stream</span>
         <span className="inline-flex items-center gap-1.5 text-subtle">
           <Radio size={13} className="text-brand" aria-hidden="true" /> Alerts refresh every 20s
         </span>
