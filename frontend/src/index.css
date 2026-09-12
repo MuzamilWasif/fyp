@@ -262,6 +262,10 @@
   video, input, textarea, select, button { display: none !important; }
   a { color: #000 !important; text-decoration: none !important; }
 
+  /* the base layer sets an explicit near-white on headings, which beats
+     inheritance from body — restore ink for paper */
+  h1, h2, h3, h4, h5, h6 { color: #000 !important; }
+
   .report { max-width: 100%; }
   .report section { page-break-inside: avoid; margin-bottom: 11pt; }
 

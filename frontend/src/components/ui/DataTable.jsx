@@ -8,7 +8,7 @@ import { SkeletonRows } from './Skeleton'
  */
 export default function DataTable({
   columns, rows, rowKey = (r) => r.id, onRowClick, loading = false,
-  empty = null, mobileCard, initialSort = null, className = ''
+  empty = null, mobileCard, initialSort = null, className = '', rowEdge
 }) {
   const [sort, setSort] = useState(initialSort) // { key, dir }
 
@@ -59,14 +59,15 @@ export default function DataTable({
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
             <thead>
-              <tr className="border-b border-line bg-surface-2/50">
+              <tr className="border-b border-line bg-chrome">
                 {columns.map((c) => (
                   <th key={c.key} scope="col" className={`th ${c.thClassName || ''}`}
                       aria-sort={sort?.key === c.key ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}>
                     {c.sortable ? (
                       <button
                         onClick={() => toggleSort(c.key)}
-                        className="inline-flex items-center gap-1 hover:text-fg transition-colors duration-fast uppercase"
+                        className="inline-flex items-center gap-1 hover:text-fg transition-colors duration-fast
+                                   uppercase font-mono tracking-[.1em]"
                       >
                         {c.header}
                         {sort?.key === c.key
@@ -86,7 +87,8 @@ export default function DataTable({
                   onKeyDown={onRowClick ? (e) => { if (e.key === 'Enter') onRowClick(row) } : undefined}
                   tabIndex={onRowClick ? 0 : undefined}
                   role={onRowClick ? 'button' : undefined}
-                  className={`row-hover ${onRowClick ? 'cursor-pointer' : ''}`}
+                  className={`row-hover h-14 ${onRowClick ? 'cursor-pointer' : ''}`}
+                  style={rowEdge ? { boxShadow: `inset 2px 0 0 0 ${rowEdge(row) || 'transparent'}` } : undefined}
                 >
                   {columns.map((c) => (
                     <td key={c.key} className={`td ${c.className || ''}`}>

@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Siren, Check, X, FilePlus2, ShieldCheck, RefreshCw, Camera, Radio
+  Siren, FilePlus2, ShieldCheck, RefreshCw, Camera
 } from 'lucide-react'
 import api from '../lib/api'
 import useAlertsSocket from '../lib/useAlertsSocket'
 import { useToast } from '../lib/toast'
 import { humanize, timeAgo, formatDateTime, severityTone, pct, errorMessage } from '../lib/format'
 import {
-  PageHeader, Card, Button, EmptyState, Tabs, Skeleton, ConfirmDialog
+  Card, Button, EmptyState, Tabs, Skeleton, ConfirmDialog
 } from '../components/ui'
 
 const POLL_MS = 20000
@@ -20,60 +20,59 @@ const STATUS_TONE = {
   case_created: 'badge-ok'
 }
 
+/** One row of the detection ledger. */
 function AlertRow({ a, onAck, onDismiss, onCreate, busy }) {
   const tone = severityTone(a.severity)
+  const sev = Math.round((a.severity || 0) * 100)
+  const conf = Math.round((a.confidence || 0) * 100)
+  const colour = tone.key === 'critical' ? '#FF4D4D' : tone.key === 'elevated' ? '#FFB020' : '#2DE3A7'
+
   return (
-    <article className={`bg-surface border ${a.status === 'new' ? tone.ring : 'border-line'}
-                         rounded-2xl p-4 flex flex-col lg:flex-row lg:items-center gap-4`}>
-      {/* severity dial */}
-      <div className="flex items-center gap-3 lg:w-56 shrink-0">
-        <div className={`w-11 h-11 rounded-xl bg-surface-2 border ${tone.ring} flex items-center justify-center shrink-0`}>
-          <Siren size={18} className={tone.text} aria-hidden="true" />
-        </div>
-        <div className="min-w-0">
-          <div className="text-body font-semibold capitalize truncate">{humanize(a.label)}</div>
-          <div className="text-small text-subtle truncate">{a.camera_id}{a.room && ` · ${a.room}`}</div>
-        </div>
+    <div
+      className="grid items-center gap-4 px-6 py-3.5 border-b border-line last:border-0
+                 transition-colors duration-fast hover:bg-surface-2
+                 grid-cols-[52px_minmax(0,1fr)_auto] lg:grid-cols-[56px_minmax(0,1fr)_190px_130px_76px_212px]"
+      style={{ boxShadow: `inset 2px 0 0 0 ${a.status === 'new' ? colour : 'transparent'}` }}
+    >
+      <span className="font-mono text-body font-semibold tnum" style={{ color: colour }}>{sev}</span>
+
+      <div className="flex items-center gap-2.5 min-w-0">
+        <Siren size={16} strokeWidth={1.7} style={{ color: colour }} className="shrink-0" aria-hidden="true" />
+        <span className="text-body text-fg truncate capitalize">{humanize(a.label)}</span>
+        <span className={`${STATUS_TONE[a.status] || 'badge-neutral'} shrink-0`}>{humanize(a.status)}</span>
       </div>
 
-      {/* severity bar */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between text-small mb-1.5">
-          <span className={`font-medium ${tone.text}`}>{tone.label} · suspicion {pct(a.severity)}</span>
-          <span className="text-subtle tnum">confidence {pct(a.confidence)} · {a.frame_count} frames</span>
-        </div>
-        <div className="h-1.5 rounded-full bg-surface-2 overflow-hidden" role="img"
-             aria-label={`Suspicion score ${pct(a.severity)}`}>
-          <div className={`h-full rounded-full ${tone.bar}`} style={{ width: pct(a.severity) }} />
-        </div>
-        <div className="text-small text-subtle mt-1.5" title={formatDateTime(a.created_at)}>
-          {timeAgo(a.created_at)}
-        </div>
+      <span className="hidden lg:block font-mono text-micro text-subtle truncate">
+        {a.camera_id}{a.room && ` · ${a.room}`}
+      </span>
+
+      <div className="hidden lg:flex items-center gap-2">
+        <span className="flex-1 h-1 rounded-sm bg-line relative overflow-hidden">
+          <span className="absolute inset-y-0 left-0 rounded-sm"
+                style={{ width: `${conf}%`, background: colour }} />
+        </span>
+        <span className="font-mono text-micro text-muted tnum">{(a.confidence || 0).toFixed(2)}</span>
       </div>
 
-      {/* status + actions */}
-      <div className="flex flex-wrap items-center gap-2 lg:justify-end lg:w-[390px] shrink-0">
-        <span className={STATUS_TONE[a.status] || 'badge-neutral'}>{humanize(a.status)}</span>
+      <span className="hidden lg:block font-mono text-micro text-faint" title={formatDateTime(a.created_at)}>
+        {timeAgo(a.created_at)}
+      </span>
+
+      <div className="flex gap-1.5 justify-end">
         {a.status === 'new' && (
           <>
-            <Button size="sm" variant="ghost" icon={Check} onClick={() => onAck(a)} loading={busy === `ack-${a.id}`}>
-              Acknowledge
-            </Button>
-            <Button size="sm" variant="subtle" icon={X} onClick={() => onDismiss(a)}>
-              Dismiss
-            </Button>
+            <Button size="sm" variant="subtle" onClick={() => onDismiss(a)}>Dismiss</Button>
+            <Button size="sm" variant="ghost" onClick={() => onAck(a)} loading={busy === `ack-${a.id}`}>Ack</Button>
           </>
         )}
         {['new', 'acknowledged'].includes(a.status) && (
-          <Button size="sm" variant="brand" icon={FilePlus2} onClick={() => onCreate(a)}>
-            Create case
-          </Button>
+          <Button size="sm" variant="outline" onClick={() => onCreate(a)}>Create case</Button>
         )}
         {a.case_id && (
-          <Button size="sm" variant="outline" onClick={() => onCreate(a, true)}>View case</Button>
+          <Button size="sm" variant="ghost" onClick={() => onCreate(a, true)}>View case</Button>
         )}
       </div>
-    </article>
+    </div>
   )
 }
 
@@ -133,15 +132,20 @@ export default function Alerts() {
 
   return (
     <>
-      <PageHeader
-        title="Live AI Alerts"
-        subtitle="Confirmed detections from the surveillance engine, ranked by suspicion score"
-        actions={
-          <Button variant="ghost" icon={RefreshCw} onClick={() => { setLoading(true); load(false) }}>
-            Refresh
-          </Button>
-        }
-      />
+      <div className="flex flex-wrap items-center gap-3.5 mb-5">
+        <h1 className="font-display text-title font-semibold text-fg">Live Alerts</h1>
+        <span className="pill-live">
+          <span className="w-1.5 h-1.5 rounded-full bg-brand animate-ve-dot" aria-hidden="true" />
+          streaming
+        </span>
+        <div className="flex-1" />
+        <span className="font-mono text-micro text-subtle tnum">
+          {counts.new} unhandled · {counts.all} total
+        </span>
+        <Button variant="ghost" icon={RefreshCw} onClick={() => { setLoading(true); load(false) }}>
+          Refresh
+        </Button>
+      </div>
 
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <Tabs
@@ -152,22 +156,17 @@ export default function Alerts() {
             { value: 'all', label: 'All alerts', count: counts.all }
           ]}
         />
-        <span className="inline-flex items-center gap-1.5 text-small text-subtle">
-          <Radio size={13} className="text-brand" aria-hidden="true" />
-          Auto-refreshing every 20s
-        </span>
-      </div>
-
-      {/* severity legend */}
-      <div className="flex flex-wrap items-center gap-3 mb-4 text-small text-subtle">
-        <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-danger" aria-hidden="true" />Critical ≥ 70%</span>
-        <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-warn" aria-hidden="true" />Elevated ≥ 50%</span>
-        <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-brand" aria-hidden="true" />Low</span>
+        <div className="flex-1" />
+        <div className="flex flex-wrap items-center gap-3 font-mono text-micro text-faint uppercase">
+          <span className="inline-flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-danger" aria-hidden="true" />crit ≥ 70</span>
+          <span className="inline-flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-warn" aria-hidden="true" />elev ≥ 50</span>
+          <span className="inline-flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-brand" aria-hidden="true" />low</span>
+        </div>
       </div>
 
       {loading ? (
-        <div className="grid gap-3">
-          {[0, 1, 2].map((i) => <Skeleton key={i} className="h-[104px]" />)}
+        <div className="bg-surface border border-line rounded-2xl p-6 space-y-3">
+          {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-11" />)}
         </div>
       ) : rows.length === 0 ? (
         <Card>
@@ -185,7 +184,13 @@ export default function Alerts() {
           />
         </Card>
       ) : (
-        <div className="grid gap-3">
+        <div className="bg-surface border border-line rounded-2xl overflow-hidden">
+          <div className="hidden lg:grid items-center gap-4 px-6 py-3.5 bg-chrome border-b border-line
+                          grid-cols-[56px_minmax(0,1fr)_190px_130px_76px_212px]
+                          font-mono text-micro uppercase text-subtle">
+            <div>sev</div><div>detection</div><div>camera · hall</div>
+            <div>confidence</div><div>age</div><div />
+          </div>
           {rows.map((a) => (
             <AlertRow
               key={a.id}

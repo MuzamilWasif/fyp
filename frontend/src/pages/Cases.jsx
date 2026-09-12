@@ -2,17 +2,17 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Search, SlidersHorizontal, X, FolderOpen, FilePlus2, PauseCircle,
-  BookLock, Inbox, RotateCcw
+  BookLock, Inbox, RotateCcw, Download
 } from 'lucide-react'
 import api from '../lib/api'
 import { useAuth } from '../lib/auth'
 import {
-  ALL_STATUSES, VIOLATION_TYPES, statusLabel, humanize, titleize, formatDate,
+  ALL_STATUSES, VIOLATION_TYPES, statusLabel, humanize, titleize, formatDate, currentStage,
   timeAgo, ACTION_STATUSES, errorMessage
 } from '../lib/format'
 import { useToast } from '../lib/toast'
 import {
-  PageHeader, Button, Input, Select, DataTable, EmptyState, StatusBadge, Tabs
+  Button, Input, Select, DataTable, EmptyState, StatusBadge, Tabs
 } from '../components/ui'
 
 const EMPTY_FILTERS = { q: '', status: '', violation: '', department: '', from: '', to: '' }
@@ -57,6 +57,24 @@ export default function Cases() {
     setParams(p, { replace: true })
   }
 
+  const [exporting, setExporting] = useState(false)
+
+  const exportCsv = async () => {
+    setExporting(true)
+    try {
+      const res = await api.get('/api/cases/export.csv', { responseType: 'blob' })
+      const url = URL.createObjectURL(new Blob([res.data], { type: 'text/csv' }))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `vigilanteye-cases-${new Date().toISOString().slice(0, 10)}.csv`
+      document.body.appendChild(a); a.click(); a.remove()
+      URL.revokeObjectURL(url)
+      toast.success('Cases exported', 'The CSV covers every case you can access.')
+    } catch (e) {
+      toast.error('Export failed', errorMessage(e))
+    } finally { setExporting(false) }
+  }
+
   const set = (k) => (e) => setFilters((f) => ({ ...f, [k]: e.target.value }))
   const clear = () => setFilters({ ...EMPTY_FILTERS })
   const activeCount = Object.entries(filters).filter(([k, v]) => k !== 'q' && v).length
@@ -87,7 +105,7 @@ export default function Cases() {
       key: 'case_no', header: 'Case', sortable: true, thClassName: 'w-[200px]', className: 'whitespace-nowrap',
       render: (c) => (
         <div className="flex items-center gap-2">
-          <span className="font-semibold tnum">{c.case_no}</span>
+          <span className="font-mono text-body text-fg">{c.case_no}</span>
           {c.source === 'ai' && <span className="badge-brand">AI</span>}
         </div>
       )
@@ -96,8 +114,10 @@ export default function Cases() {
       key: 'student_name', header: 'Student', sortable: true,
       render: (c) => (
         <div className="min-w-0">
-          <div className="truncate">{c.student_name}</div>
-          <div className="text-small text-subtle tnum">{c.student_reg_no}{c.student_department && ` · ${c.student_department}`}</div>
+          <div className="text-body text-fg truncate">{c.student_name}</div>
+          <div className="font-mono text-micro text-subtle mt-1">
+            {c.student_reg_no}{c.student_department && ` · ${c.student_department}`}
+          </div>
         </div>
       )
     },
@@ -106,40 +126,56 @@ export default function Cases() {
       render: (c) => <span className="capitalize">{humanize(c.violation_type)}</span>
     },
     {
-      key: 'room', header: 'Location', sortable: true,
+      key: 'room', header: 'Hall / Seat', sortable: true, className: 'whitespace-nowrap',
       render: (c) => (
-        <div className="text-small">
-          <div>{c.room || '—'}{c.seat && <span className="text-subtle"> / {c.seat}</span>}</div>
-          <div className="text-subtle truncate max-w-[160px]">{c.exam_name || '—'}</div>
-        </div>
+        c.room
+          ? <span className="badge-neutral">{c.room}{c.seat && ` · ${c.seat}`}</span>
+          : <span className="text-faint">—</span>
       )
     },
     {
-      key: 'flags', header: 'Flags', className: 'whitespace-nowrap',
+      key: 'stage', header: 'Progress', thClassName: 'w-24',
+      sortValue: (c) => currentStage(c.status),
+      render: (c) => {
+        const stage = Math.min(6, currentStage(c.status) + 1)
+        const done = c.status === 'closed'
+        return (
+          <span className="flex items-center gap-2" title={`Stage ${stage} of 6`}>
+            <span className="relative flex-1 h-1 rounded-sm bg-line overflow-hidden">
+              <span className={`absolute inset-y-0 left-0 rounded-sm ${done ? 'bg-brand' : 'bg-info'}`}
+                    style={{ width: `${(stage / 6) * 100}%` }} />
+            </span>
+            <span className="font-mono text-micro text-faint tnum">{stage}/6</span>
+          </span>
+        )
+      }
+    },
+    {
+      key: 'status', header: 'Status', sortable: true, className: 'whitespace-nowrap',
+      sortValue: (c) => ALL_STATUSES.indexOf(c.status),
       render: (c) => (
-        <div className="flex gap-1">
+        <div className="flex items-center gap-1.5">
+          <StatusBadge status={c.status} />
           {c.result_hold && (
-            <span className="badge-danger" title="Result on hold"><PauseCircle size={11} aria-hidden="true" />Hold</span>
+            <span className="badge-danger" title="Result on hold">
+              <PauseCircle size={10} aria-hidden="true" />hold
+            </span>
           )}
           {c.transcript_blocked && (
-            <span className="badge-danger" title="Transcript blocked"><BookLock size={11} aria-hidden="true" />Transcript</span>
+            <span className="badge-danger" title="Transcript blocked">
+              <BookLock size={10} aria-hidden="true" />tr
+            </span>
           )}
-          {!c.result_hold && !c.transcript_blocked && <span className="text-subtle">—</span>}
         </div>
       )
-    },
-    {
-      key: 'status', header: 'Status', sortable: true,
-      sortValue: (c) => ALL_STATUSES.indexOf(c.status),
-      render: (c) => <StatusBadge status={c.status} />
     },
     {
       key: 'created_at', header: 'Reported', sortable: true, className: 'whitespace-nowrap',
       sortValue: (c) => new Date(c.created_at).getTime(),
       render: (c) => (
-        <div className="text-small">
-          <div>{formatDate(c.created_at)}</div>
-          <div className="text-subtle">{timeAgo(c.created_at)}</div>
+        <div className="font-mono text-micro">
+          <div className="text-muted">{formatDate(c.created_at)}</div>
+          <div className="text-faint mt-1">{timeAgo(c.created_at)}</div>
         </div>
       )
     }
@@ -197,13 +233,17 @@ export default function Cases() {
 
   return (
     <>
-      <PageHeader
-        title="UFM Cases"
-        subtitle={loading ? 'Loading…' : `${rows.length} of ${cases.length} case${cases.length === 1 ? '' : 's'}`}
-        actions={['invigilator', 'admin'].includes(user.role) && (
+      <div className="flex flex-wrap items-center gap-3.5 mb-5">
+        <h1 className="font-display text-title font-semibold text-fg">UFM Cases</h1>
+        <span className="font-mono text-small text-subtle tnum">
+          {loading ? 'loading…' : `${rows.length} of ${cases.length} records`}
+        </span>
+        <div className="flex-1" />
+        <Button variant="ghost" icon={Download} onClick={exportCsv} loading={exporting}>Export CSV</Button>
+        {['invigilator', 'admin'].includes(user.role) && (
           <Link to="/cases/new"><Button variant="brand" icon={FilePlus2}>Report UFM</Button></Link>
         )}
-      />
+      </div>
 
       {canQueue && (
         <Tabs
@@ -272,6 +312,7 @@ export default function Cases() {
         rows={rows}
         loading={loading}
         onRowClick={(c) => nav(`/cases/${c.id}`)}
+        rowEdge={(c) => (c.result_hold ? '#FF4D4D' : null)}
         mobileCard={mobileCard}
         empty={emptyState}
         initialSort={{ key: 'created_at', dir: 'desc' }}
