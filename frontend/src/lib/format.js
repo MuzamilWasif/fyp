@@ -165,3 +165,22 @@ export function currentStage(status) {
 
 export const isReturned = (status) => status === 'hod_returned'
 export const isTerminal = (status) => status === 'closed'
+
+/** Readable names for the workflow actions recorded on a case. */
+export const ACTION_LABELS = {
+  submitted: 'Case submitted',
+  approve: 'Verified & approved',
+  return: 'Returned for correction',
+  forward: 'Forwarded onward',
+  decide: 'Final decision recorded',
+  hold: 'Result placed on hold',
+  release_result: 'Result released',
+  block_transcript: 'Transcript blocked',
+  unblock_transcript: 'Transcript unblocked',
+  close: 'Case closed',
+  note: 'Note added',
+  evidence_uploaded: 'Evidence uploaded',
+  student_response: 'Student explanation'
+}
+
+export const actionLabel = (a) => ACTION_LABELS[a] || titleize(a)

@@ -23,7 +23,7 @@ export default function CaseProgress({ status, className = '' }) {
                 : 'bg-surface-2 border-line text-subtle'
 
           return (
-            <li key={s.key} className="flex-1 min-w-[92px] flex flex-col items-center text-center relative">
+            <li key={s.key} className="flex-1 min-w-[56px] sm:min-w-[92px] flex flex-col items-center text-center relative">
               {i > 0 && (
                 <span
                   aria-hidden="true"
@@ -34,7 +34,7 @@ export default function CaseProgress({ status, className = '' }) {
                                 justify-center text-[10px] font-bold ${dot}`}>
                 {needsRework ? <RotateCcw size={11} /> : done ? <Check size={12} /> : i + 1}
               </span>
-              <span className={`mt-1.5 text-[11px] leading-tight px-1
+              <span className={`mt-1.5 text-[10px] sm:text-[11px] leading-tight px-0.5 sm:px-1
                                 ${done || active ? 'text-fg font-medium' : 'text-subtle'}`}>
                 {s.label}
               </span>

@@ -35,9 +35,16 @@ export default function DataTable({
 
   if (loading) {
     return (
-      <div className={`bg-surface border border-line rounded-2xl overflow-hidden ${className}`}>
-        <SkeletonRows rows={6} cols={Math.min(columns.length, 6)} />
-      </div>
+      <>
+        <div className={`hidden md:block bg-surface border border-line rounded-2xl overflow-hidden ${className}`}>
+          <SkeletonRows rows={6} cols={Math.min(columns.length, 6)} />
+        </div>
+        <div className="md:hidden grid gap-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="skeleton h-32" aria-hidden="true" />
+          ))}
+        </div>
+      </>
     )
   }
 

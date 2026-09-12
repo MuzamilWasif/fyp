@@ -193,3 +193,115 @@ def test_invigilator_only_sees_own_cases():
     rows = client.get("/api/cases", headers=inv).json()
     assert rows, "invigilator should see the cases they reported"
     assert all(c["student_reg_no"] for c in rows)
+
+
+# --------------------------------------------------------------------------
+# Student response, committee history and CSV export
+# --------------------------------------------------------------------------
+
+def _new_case(reg_no="232430", name="Test Student", violation="mobile_phone"):
+    inv = login("invigilator@au.edu.pk")
+    r = client.post("/api/cases", json={
+        "student_reg_no": reg_no, "student_name": name, "student_department": "CS",
+        "exam_name": "Data Structures Final", "room": "A-101", "seat": "A12",
+        "violation_type": violation, "description": "seeded by test",
+    }, headers=inv)
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+def test_student_can_submit_one_explanation_on_own_case():
+    case = _new_case()
+    stu = login("student@au.edu.pk")
+
+    r = client.post(f"/api/cases/{case['id']}/student-response",
+                    json={"text": "The phone was switched off in my bag."}, headers=stu)
+    assert r.status_code == 200, r.text
+    actions = r.json()["actions"]
+    mine = [a for a in actions if a["action"] == "student_response"]
+    assert len(mine) == 1
+    assert mine[0]["actor_role"] == "student"
+    assert "switched off" in mine[0]["comment"]
+
+
+def test_student_response_rejects_empty_text():
+    case = _new_case()
+    stu = login("student@au.edu.pk")
+    r = client.post(f"/api/cases/{case['id']}/student-response", json={"text": "   "}, headers=stu)
+    assert r.status_code == 422
+
+
+def test_student_cannot_respond_on_someone_elses_case():
+    case = _new_case(reg_no="219902", name="Bilal Ahmed")
+    stu = login("student@au.edu.pk")
+    r = client.post(f"/api/cases/{case['id']}/student-response",
+                    json={"text": "not mine"}, headers=stu)
+    assert r.status_code == 403
+
+
+def test_student_response_blocked_after_closure():
+    case = _new_case()
+    ed = login("examdept@au.edu.pk")
+    client.post(f"/api/cases/{case['id']}/transition", json={"action": "close"}, headers=ed)
+    r = client.post(f"/api/cases/{case['id']}/student-response",
+                    json={"text": "too late"}, headers=login("student@au.edu.pk"))
+    assert r.status_code == 400
+
+
+def test_staff_cannot_use_the_student_response_endpoint():
+    case = _new_case()
+    r = client.post(f"/api/cases/{case['id']}/student-response",
+                    json={"text": "not a student"}, headers=login("hod@au.edu.pk"))
+    assert r.status_code == 403
+
+
+def test_committee_sees_full_student_ufm_history():
+    first = _new_case(violation="notes_paper")
+    second = _new_case(violation="mobile_phone")
+
+    r = client.get(f"/api/cases/{second['id']}/student-history", headers=login("committee@au.edu.pk"))
+    assert r.status_code == 200, r.text
+    data = r.json()
+    assert data["student_reg_no"] == "232430"
+    assert data["total_cases"] >= 2
+    assert data["prior_cases"] == data["total_cases"] - 1
+    ids = [c["id"] for c in data["cases"]]
+    assert first["id"] in ids and second["id"] in ids
+    assert [c for c in data["cases"] if c["is_current"]][0]["id"] == second["id"]
+
+
+def test_student_cannot_read_ufm_history():
+    case = _new_case()
+    r = client.get(f"/api/cases/{case['id']}/student-history", headers=login("student@au.edu.pk"))
+    assert r.status_code == 403
+
+
+def test_history_404_for_unknown_case():
+    r = client.get("/api/cases/999999/student-history", headers=login("committee@au.edu.pk"))
+    assert r.status_code == 404
+
+
+def test_csv_export_is_role_scoped():
+    _new_case()
+    ed = client.get("/api/cases/export.csv", headers=login("examdept@au.edu.pk"))
+    assert ed.status_code == 200, ed.text
+    assert ed.headers["content-type"].startswith("text/csv")
+    assert "attachment" in ed.headers["content-disposition"]
+
+    header, *rows = [line for line in ed.text.splitlines() if line.strip()]
+    assert header.startswith("Case No,Status,Student Reg No")
+    assert len(rows) >= 2
+
+    # a student's export contains only their own cases
+    stu = client.get("/api/cases/export.csv", headers=login("student@au.edu.pk"))
+    assert stu.status_code == 200
+    stu_rows = [line for line in stu.text.splitlines()[1:] if line.strip()]
+    assert stu_rows, "student should still be able to export their own record"
+    assert all("232430" in row for row in stu_rows)
+    assert len(stu_rows) < len(rows)
+
+
+def test_csv_export_rejects_unknown_status():
+    r = client.get("/api/cases/export.csv", params={"status": "bogus"},
+                   headers=login("examdept@au.edu.pk"))
+    assert r.status_code == 422

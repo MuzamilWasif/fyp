@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional, List
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 
 class UserCreate(BaseModel):
@@ -104,6 +104,10 @@ class CaseOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class StudentResponse(BaseModel):
+    text: str = Field(min_length=1, max_length=4000)
 
 
 class CaseTransition(BaseModel):

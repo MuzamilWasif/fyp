@@ -120,30 +120,60 @@
 .toast-wrap { @apply fixed z-[80] flex flex-col gap-2 bottom-24 right-4 left-4 sm:left-auto sm:bottom-6 sm:right-6 sm:w-96; }
 
 /* -------------------------------------------- official printed UFM report */
-@media print {
-  @page { size: A4; margin: 16mm 14mm; }
+.print-only { display: none; }
 
-  body { background: #fff !important; color: #000 !important; font-family: Georgia, 'Times New Roman', serif; font-size: 11pt; }
-  .no-print, aside, nav, header.app-topbar, .toast-wrap { display: none !important; }
+@media print {
+  @page { size: A4; margin: 15mm 14mm 18mm; }
+
+  /* the app declares a dark color-scheme; paper must go back to light or the
+     browser paints a dark canvas behind the report */
+  :root { color-scheme: light; }
+
+  /* the app shell paints a near-black canvas over the whole viewport; strip
+     every background first, then re-apply only the report's own shading */
+  #root, #root * { background-color: transparent !important; background-image: none !important; }
+
+  html, body {
+    background: #fff !important;
+    color: #000 !important;
+    font-family: 'Times New Roman', Georgia, serif;
+    font-size: 10.5pt;
+    line-height: 1.45;
+  }
+
+  /* only the official document reaches the paper */
+  .no-print, aside, nav, header.app-topbar, .toast-wrap, .app-screen { display: none !important; }
   main, .app-main { padding: 0 !important; margin: 0 !important; overflow: visible !important; }
   .print-only { display: block !important; }
 
-  .card, .card-tight, .panel {
-    background: #fff !important; color: #000 !important;
-    border: 1px solid #bbb !important; border-radius: 0 !important;
-    padding: 10pt !important; page-break-inside: avoid;
-  }
-  .badge { border: 1px solid #777 !important; color: #000 !important; background: #fff !important; border-radius: 2pt; }
-  a { color: #000 !important; text-decoration: none !important; }
-  h1, h2, h3 { color: #000 !important; }
-  .text-muted, .text-subtle, [class*='text-neutral'] { color: #333 !important; }
-  .text-brand, [class*='text-brand'] { color: #000 !important; }
-
   video, input, textarea, select, button { display: none !important; }
-  img { max-width: 46% !important; break-inside: avoid; filter: grayscale(100%); }
+  a { color: #000 !important; text-decoration: none !important; }
 
-  /* grid collapses to a readable single flow on paper */
-  .print-block { display: block !important; }
-  .print-cols { column-count: 2; column-gap: 18pt; }
+  .report { max-width: 100%; }
+  .report section { page-break-inside: avoid; margin-bottom: 11pt; }
+
+  .report-head { text-align: center; border-bottom: 2pt solid #000; padding-bottom: 7pt; margin-bottom: 12pt; }
+  .report-head h1 { font-size: 16pt; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; margin: 0; }
+  .report-head h2 { font-size: 11pt; font-weight: 400; margin: 2pt 0 0; }
+  .report-head h3 { font-size: 12pt; font-weight: 700; text-transform: uppercase; margin: 8pt 0 0; letter-spacing: .03em; }
+  .report-meta { display: flex; justify-content: space-between; gap: 10pt; margin-top: 8pt; font-size: 9.5pt; }
+
+  .report h4 { font-size: 10.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: .03em;
+               margin: 0 0 4pt; border-bottom: .5pt solid #999; padding-bottom: 2pt; }
+
+  .report-table { width: 100%; border-collapse: collapse; }
+  .report-table th, .report-table td { border: .5pt solid #999; padding: 3.5pt 5pt; text-align: left; vertical-align: top; }
+  .report-table thead th { background: #ececec !important; font-weight: 700; font-size: 9.5pt; }
+  .report-key { width: 30%; background: #f5f5f5 !important; font-weight: 700; }
+  .report-val { width: 70%; }
+  .report-note { margin: 3pt 0 0; font-style: italic; }
+
+  .report-sign-grid { display: flex; flex-wrap: wrap; gap: 14pt 24pt; margin-top: 22pt; }
+  .report-sign { flex: 1 1 40%; min-width: 150pt; }
+  .report-sign-line { border-bottom: .75pt solid #000; height: 26pt; }
+  .report-sign-title { font-weight: 700; font-size: 9.5pt; margin-top: 3pt; }
+  .report-sign-note { font-size: 8.5pt; color: #444; }
+
+  .report-foot { margin-top: 18pt; padding-top: 5pt; border-top: .5pt solid #999;
+                 font-size: 8pt; text-align: center; color: #333; }
 }
-.print-only { display: none; }

@@ -37,11 +37,12 @@ export default function Topbar({ user, onOpenSidebar, onSignOut }) {
           {crumbs.map((c, i) => {
             const last = i === crumbs.length - 1
             return (
-              <li key={c.to} className="flex items-center gap-1 min-w-0">
+              <li key={c.to}
+                  className={`items-center gap-1 min-w-0 ${last ? 'flex' : 'hidden sm:flex'}`}>
                 {i > 0 && <ChevronRight size={14} className="text-subtle shrink-0" aria-hidden="true" />}
                 {last
                   ? <span className="font-semibold text-fg truncate" aria-current="page">{c.label}</span>
-                  : <Link to={c.to} className="text-subtle hover:text-fg transition-colors duration-fast truncate hidden sm:inline">
+                  : <Link to={c.to} className="text-subtle hover:text-fg transition-colors duration-fast truncate">
                       {c.label}
                     </Link>}
               </li>
