@@ -135,3 +135,33 @@ export function errorMessage(err, fallback = 'Something went wrong') {
   if (err?.response?.status === 404) return 'Not found'
   return err?.message === 'Network Error' ? 'Cannot reach the server' : fallback
 }
+
+/** The six official lifecycle stages, used by the student tracker and the
+ *  case timeline so both tell the same story. */
+export const LIFECYCLE_STAGES = [
+  { key: 'reported', label: 'Reported', role: 'invigilator', hint: 'Invigilator submits the case; result placed on hold' },
+  { key: 'hod', label: 'HOD verification', role: 'hod', hint: 'Head of Department verifies and signs' },
+  { key: 'dec', label: 'DEC review', role: 'dec', hint: 'Departmental Examination Committee reviews' },
+  { key: 'exam_dept', label: 'Examination Dept', role: 'exam_dept', hint: 'Result hold, transcript block and records' },
+  { key: 'committee', label: 'UFM Committee', role: 'ufm_committee', hint: 'Final decision and penalty' },
+  { key: 'closure', label: 'Decision & closure', role: 'exam_dept', hint: 'Result released and case closed' }
+]
+
+/** Index of the stage a case is currently sitting at. */
+export function currentStage(status) {
+  switch (status) {
+    case 'draft': return 0
+    case 'hod_returned': return 0
+    case 'submitted': return 1
+    case 'hod_approved': return 2
+    case 'dec_forwarded': return 3
+    case 'exam_dept_forwarded':
+    case 'under_committee_review': return 4
+    case 'decided': return 5
+    case 'closed': return 6
+    default: return 0
+  }
+}
+
+export const isReturned = (status) => status === 'hod_returned'
+export const isTerminal = (status) => status === 'closed'

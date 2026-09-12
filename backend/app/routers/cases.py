@@ -8,6 +8,7 @@ from ..schemas.schemas import CaseCreate, CaseOut, CaseTransition
 from ..core.security import get_current_user, require_roles
 from ..services.audit import log
 from ..services.notify import notify_roles, notify_user
+from ..services.scoping import scope_cases, pending_statuses
 from ..config import settings
 
 router = APIRouter(prefix="/api/cases", tags=["cases"])
@@ -67,18 +68,24 @@ def create_case(payload: CaseCreate, db: Session = Depends(get_db),
 
 
 @router.get("", response_model=list[CaseOut])
-def list_cases(status: str | None = None, db: Session = Depends(get_db),
-               user: User = Depends(get_current_user)):
-    q = db.query(UFMCase)
-    if user.role == Role.STUDENT:
-        q = q.filter((UFMCase.student_id == user.id) | (UFMCase.student_reg_no == user.reg_no))
-    elif user.role == Role.INVIGILATOR:
-        q = q.filter(UFMCase.created_by == user.id)
-    elif user.role in (Role.HOD, Role.DEC):
-        if user.department:
-            q = q.filter(UFMCase.student_department == user.department)
+def list_cases(status: str | None = None, pending: bool = False,
+               db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Cases visible to the caller.
+
+    `pending=true` narrows the list to the cases that are waiting on the
+    caller's own role — the "needs your action" queue.
+    """
+    q = scope_cases(db.query(UFMCase), user)
     if status:
-        q = q.filter(UFMCase.status == CaseStatus(status))
+        try:
+            q = q.filter(UFMCase.status == CaseStatus(status))
+        except ValueError:
+            raise HTTPException(422, f"Unknown status '{status}'")
+    if pending:
+        waiting = pending_statuses(user)
+        if not waiting:
+            return []
+        q = q.filter(UFMCase.status.in_(waiting))
     return q.order_by(UFMCase.created_at.desc()).all()
 
 

@@ -81,7 +81,7 @@ export function BreakdownChart({ data, kind = 'plain', height = 220, color = '#a
           <XAxis type="number" allowDecimals={false} {...AXIS} />
           <YAxis type="category" dataKey="name" width={124} {...AXIS} />
           <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-          <Bar dataKey="value" name="Cases" radius={[0, 6, 6, 0]} isAnimationActive={false}>
+          <Bar dataKey="value" name="Cases" radius={[0, 6, 6, 0]} maxBarSize={26} isAnimationActive={false}>
             {rows.map((r, i) => <Cell key={i} fill={r.fill} />)}
           </Bar>
         </BarChart>

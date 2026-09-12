@@ -126,3 +126,70 @@ def test_dashboard_stats():
     data = r.json()
     assert data["total_cases"] >= 2
     assert "monthly_trend" in data and len(data["monthly_trend"]) == 12
+
+
+# --------------------------------------------------------------------------
+# Role-scoped dashboard + action queue
+# --------------------------------------------------------------------------
+
+def test_dashboard_is_role_scoped():
+    """A student's dashboard counts only their own cases, never the institution's."""
+    ed = client.get("/api/dashboard/stats", headers=login("examdept@au.edu.pk")).json()
+    stu = client.get("/api/dashboard/stats", headers=login("student@au.edu.pk")).json()
+
+    assert ed["scope"] == "institution"
+    assert stu["scope"] == "own"
+    assert stu["total_cases"] <= ed["total_cases"]
+    # AI alerts are hall-level information a student must not receive
+    assert stu["new_alerts"] == 0
+
+
+def test_dashboard_exposes_deltas_and_action_counter():
+    data = client.get("/api/dashboard/stats", headers=login("hod@au.edu.pk")).json()
+    for key in ("deltas", "this_month", "last_month", "action_required", "scope", "transcript_blocks"):
+        assert key in data, key
+    assert set(data["deltas"]) == {"total_cases", "decided_cases"}
+    assert data["deltas"]["total_cases"] == data["this_month"]["created"] - data["last_month"]["created"]
+    assert isinstance(data["action_required"], int)
+    # original contract still intact
+    assert len(data["monthly_trend"]) == 12
+
+
+def test_action_queue_matches_each_role():
+    inv = login("invigilator@au.edu.pk")
+    r = client.post("/api/cases", json={
+        "student_reg_no": "232430", "student_name": "Test Student", "student_department": "CS",
+        "violation_type": "notes_paper", "description": "Notes in pocket",
+    }, headers=inv)
+    assert r.status_code == 200
+    cid = r.json()["id"]
+
+    # a freshly submitted case is waiting on the HOD
+    hod = login("hod@au.edu.pk")
+    queue = client.get("/api/cases", params={"pending": True}, headers=hod).json()
+    assert cid in [c["id"] for c in queue]
+
+    # ...and not on the DEC yet
+    dec = login("dec@au.edu.pk")
+    assert cid not in [c["id"] for c in client.get("/api/cases", params={"pending": True}, headers=dec).json()]
+
+    # after HOD approval it moves to the DEC queue
+    client.post(f"/api/cases/{cid}/transition", json={"action": "approve"}, headers=hod)
+    assert cid in [c["id"] for c in client.get("/api/cases", params={"pending": True}, headers=dec).json()]
+    assert cid not in [c["id"] for c in client.get("/api/cases", params={"pending": True}, headers=hod).json()]
+
+    # students are never in a queue
+    stu = login("student@au.edu.pk")
+    assert client.get("/api/cases", params={"pending": True}, headers=stu).json() == []
+
+
+def test_case_list_rejects_unknown_status():
+    r = client.get("/api/cases", params={"status": "not_a_status"}, headers=login("hod@au.edu.pk"))
+    assert r.status_code == 422
+
+
+def test_invigilator_only_sees_own_cases():
+    inv = login("invigilator@au.edu.pk")
+    rows = client.get("/api/cases", headers=inv).json()
+    assert rows, "invigilator should see the cases they reported"
+    assert all(c["student_reg_no"] for c in rows)
